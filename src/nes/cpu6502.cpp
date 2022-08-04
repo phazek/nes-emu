@@ -81,6 +81,41 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kAND: {
+			acc_ = acc_ & operand;
+
+			SetFlag(Flag::N, acc_ & 0x80);
+			SetFlag(Flag::Z, acc_ == 0);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kABY:
+					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kINX:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kINY:
+					cycleLeft_ += 5 + (boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 4;
+					break;
+				default:;
+			}
+			break;
+		}
     }
 }
 
