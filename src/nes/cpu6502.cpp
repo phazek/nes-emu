@@ -39,28 +39,27 @@ void Cpu6502::Tick() {
     // compensate for multi-cycle instructions
     auto opCode = bus_->Read(pc_);
     auto op = kOpDecoder.at(opCode);
-    uint8_t operand;
-    bool boundaryCrossed = FetchOperand(op.addrMode, operand);
+    auto operand = FetchOperand(op.addrMode);
 
     switch (op.instr) {
 		case Instruction::kADC: {
-			uint16_t tmp = acc_ + (int8_t)operand + (IsSet(Flag::C) ? 1 : 0);
-			acc_ = tmp & 0xFF;
-
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-			SetFlag(Flag::C, tmp & 0x100);
-			SetFlag(Flag::V, (!((acc_ ^ operand) & 0x80) && ((acc_ ^ tmp) & 0x80)));
+			const uint16_t sum = acc_ + operand.val + (IsSet(Flag::C) ? 1 : 0);
+			const uint8_t result = sum & 0xFF;
+			SetFlag(Flag::C, sum >> 8);
+			SetFlag(Flag::V, !!((acc_ ^ result) & (operand.val^ result) & 0x80));
+			SetFlag(Flag::N, !!(result & 0x80));
+			SetFlag(Flag::Z, !result);
+			acc_ = result;
 
 			switch (op.addrMode) {
 				case AddressMode::kABS:
 					cycleLeft_ += 4;
 					break;
 				case AddressMode::kABX:
-					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
 					break;
 				case AddressMode::kABY:
-					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
 					break;
 				case AddressMode::kIMM:
 					cycleLeft_ += 2;
@@ -69,7 +68,7 @@ void Cpu6502::Tick() {
 					cycleLeft_ += 6;
 					break;
 				case AddressMode::kINY:
-					cycleLeft_ += 5 + (boundaryCrossed ? 1 : 0);
+					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
 					break;
 				case AddressMode::kZP:
 					cycleLeft_ += 3;
@@ -82,7 +81,7 @@ void Cpu6502::Tick() {
 			break;
 		}
 		case Instruction::kAND: {
-			acc_ = acc_ & operand;
+			acc_ = acc_ & operand.val;
 
 			SetFlag(Flag::N, acc_ & 0x80);
 			SetFlag(Flag::Z, acc_ == 0);
@@ -92,10 +91,10 @@ void Cpu6502::Tick() {
 					cycleLeft_ += 4;
 					break;
 				case AddressMode::kABX:
-					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
 					break;
 				case AddressMode::kABY:
-					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
 					break;
 				case AddressMode::kIMM:
 					cycleLeft_ += 2;
@@ -104,7 +103,7 @@ void Cpu6502::Tick() {
 					cycleLeft_ += 6;
 					break;
 				case AddressMode::kINY:
-					cycleLeft_ += 5 + (boundaryCrossed ? 1 : 0);
+					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
 					break;
 				case AddressMode::kZP:
 					cycleLeft_ += 3;
@@ -119,37 +118,57 @@ void Cpu6502::Tick() {
     }
 }
 
-bool Cpu6502::FetchOperand(AddressMode m, uint8_t& operand) {
+Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
+	Cpu6502::Operand res;
+	uint16_t addr;
 	switch (m) {
 		case AddressMode::kACC: {
-			operand = 0;
-			return false;
+			res.val = acc_;
+			res.addr = 0xFFFF;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kABS: {
 			auto LL = bus_->Read(pc_ + 1);
 			auto HH = bus_->Read(pc_ + 2);
-			operand = bus_->Read(Join(LL, HH));
-			return false;
+			auto addr = Join(LL, HH);
+
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kABX: {
 			auto LL = bus_->Read(pc_ + 1);
 			auto HH = bus_->Read(pc_ + 2);
-			operand = bus_->Read(Join(LL, HH) + x_);
-			return (uint8_t)(LL + x_) < x_;
+			auto addr = Join(LL, HH) + x_;
+
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = (uint8_t)(LL + x_) < x_;
+			break;
 		}
 		case AddressMode::kABY: {
 			auto LL = bus_->Read(pc_ + 1);
 			auto HH = bus_->Read(pc_ + 2);
-			operand = bus_->Read(Join(LL, HH) + y_);
-			return (uint8_t)(LL + y_) < y_;
+			auto addr = Join(LL, HH) + y_;
+
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = (uint8_t)(LL + y_) < y_;
+			break;
 		}
 		case AddressMode::kIMM: {
-			operand = bus_->Read(pc_ + 1);
-			return false;
+			res.val = bus_->Read(pc_ + 1);
+			res.addr = pc_ + 1;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kIMP: {
-			operand = 0;
-			return false;
+			res.val = 0;
+			res.addr = 0xFFFF;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kIND: {
 			auto LL = bus_->Read(pc_ + 1);
@@ -157,41 +176,60 @@ bool Cpu6502::FetchOperand(AddressMode m, uint8_t& operand) {
 			auto addr = Join(LL, HH);
 			LL = bus_->Read(addr);
 			HH = bus_->Read(addr + 1);
-			operand = bus_->Read(Join(LL, HH));
-			return false;
+			addr = Join(LL, HH);
+
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kINX: {
-			uint16_t addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
+			addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
 			auto LL = bus_->Read(addr);
 			auto HH = bus_->Read(addr + 1);
-			operand = bus_->Read(Join(LL, HH));
-			return false;
+			auto addr = Join(LL, HH);
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kINY: {
-			uint16_t addr = bus_->Read(pc_ + 1) & 0xFF;
+			addr = bus_->Read(pc_ + 1) & 0xFF;
 			auto LL = bus_->Read(addr);
 			auto HH = bus_->Read(addr + 1);
-			operand = bus_->Read(Join(LL, HH) + y_);
-			return (uint8_t)(LL + y_) < y_;
+			auto addr = Join(LL, HH) + y_;
+
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = (uint8_t)(LL + y_) < y_;
+			break;
 		}
 		case AddressMode::kREL: {
-			operand = bus_->Read(pc_ + 1);
-			return ((pc_ + (int8_t)operand) & 0xFF00) != (pc_ & 0xFF00);
+			res.val = bus_->Read(pc_ + 1);
+			res.addr = pc_ + 1;
+			res.boundaryCrossed = ((pc_ + (int8_t)res.val) & 0xFF00) != (pc_ & 0xFF00);
+			break;
 		}
 		case AddressMode::kZP: {
-			uint16_t addr = bus_->Read(pc_ + 1);
-			operand = bus_->Read(addr);
-			return false;
+			addr = bus_->Read(pc_ + 1);
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kZPX: {
-			uint16_t addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
-			operand = bus_->Read(addr);
-			return false;
+			addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = false;
+			break;
 		}
 		case AddressMode::kZPY: {
-			uint16_t addr = (bus_->Read(pc_ + 1) + y_) & 0xFF;
-			operand = bus_->Read(addr);
-			return false;
+			addr = (bus_->Read(pc_ + 1) + y_) & 0xFF;
+			res.val = bus_->Read(addr);
+			res.addr = addr;
+			res.boundaryCrossed = false;
+			break;
 		}
 	}
 }

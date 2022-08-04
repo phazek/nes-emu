@@ -25,6 +25,12 @@ private:
 		C = 1		// carry
 	};
 
+	struct Operand {
+		uint8_t val = 0;
+		uint16_t addr = 0;
+		bool boundaryCrossed = false;
+	};
+
 	uint16_t pc_;
 	uint8_t acc_;
 	uint8_t x_;
@@ -37,7 +43,7 @@ private:
 
 	Bus* bus_ = nullptr;
 
-	bool FetchOperand(AddressMode m, uint8_t& operand);
+	Operand FetchOperand(AddressMode m);
 	bool IsSet(Flag f) const;
 	void SetFlag(Flag f, bool active);
 };
