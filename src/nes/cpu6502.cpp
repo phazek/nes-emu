@@ -176,6 +176,22 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 2;
 			break;
 		}
+		case Instruction::kBIT: {
+			SetFlag(Flag::N, operand.val & 0b10000000);
+			SetFlag(Flag::V, operand.val & 0b01000000);
+			SetFlag(Flag::Z, !(acc_ & operand.val));
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				default:;
+			}
+			break;
+		}
 		case Instruction::kBNE: {
 			auto oldPc = pc_;
 		    if (!IsSet(Flag::Z)) {
@@ -302,6 +318,8 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			break;
 		}
 	}
+
+	return res;
 }
 
 bool Cpu6502::IsSet(Flag f) const {
