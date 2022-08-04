@@ -31,6 +31,16 @@ void Cpu6502::Reset() {
 }
 
 void Cpu6502::Tick() {
+    if (cycleLeft_) {
+		cycleLeft_--;
+		return;
+    }
+
+    // compensate for multi-cycle instructions
+    auto opCode = bus_->Read(pc_);
+    auto op = kOpDecoder.at(opCode);
+    uint8_t operand;
+    bool boundaryCrossed = FetchOperand(op.addrMode, operand);
 }
 
 bool Cpu6502::FetchOperand(AddressMode m, uint8_t& operand) {
