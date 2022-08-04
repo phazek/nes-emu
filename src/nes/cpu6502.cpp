@@ -301,6 +301,46 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kCPX: {
+			auto res = x_ - operand.val;
+			SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
+			SetFlag(Flag::Z, res == 0);
+			SetFlag(Flag::C, res >= 0);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				default:;
+			}
+			break;
+		}
+		case Instruction::kCPY: {
+			auto res = y_ - operand.val;
+			SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
+			SetFlag(Flag::Z, res == 0);
+			SetFlag(Flag::C, res >= 0);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				default:;
+			}
+			break;
+		}
     }
 }
 
