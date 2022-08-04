@@ -510,6 +510,56 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kLDX: {
+			x_ = operand.val;
+			SetFlag(Flag::N, x_ & 0x80);
+			SetFlag(Flag::Z, x_ == 0);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kABY:
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPY:
+					cycleLeft_ += 4;
+					break;
+				default:;
+			}
+			break;
+		}
+		case Instruction::kLDY: {
+			y_ = operand.val;
+			SetFlag(Flag::N, y_ & 0x80);
+			SetFlag(Flag::Z, y_ == 0);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 4;
+					break;
+				default:;
+			}
+			break;
+		}
     }
 }
 
