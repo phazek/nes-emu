@@ -27,7 +27,7 @@ void Cpu6502::Reset() {
 	auto LL = bus_->Read(kResetVectorLo);
 	auto HH = bus_->Read(kResetVectorHi);
 	pc_ = Join(LL, HH);
-	stack_ = 0xFF;
+	stackPtr_ = 0xFF;
 }
 
 void Cpu6502::Tick() {
@@ -341,15 +341,23 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 }
 
 bool Cpu6502::IsSet(Flag f) const {
-	return stack_ & f;
+	return status_ & f;
 }
 
 void Cpu6502::SetFlag(Flag f, bool active) {
 	if (active) {
-		stack_ |= f;
+		status_ |= f;
 	} else {
-		stack_ &= ~f;
+		status_ &= ~f;
 	}
+}
+
+void Cpu6502::PushStack(uint8_t val) {
+	bus_->Write(0x100 + stackPtr_--, val);
+}
+
+uint8_t Cpu6502::PopStack() {
+	return bus_->Read(0x100 + ++stackPtr_);
 }
 
 } // namespace nes

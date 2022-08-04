@@ -35,7 +35,7 @@ private:
 	uint8_t acc_;
 	uint8_t x_;
 	uint8_t y_;
-	uint8_t stack_;
+	uint8_t stackPtr_;
 	uint8_t status_;
 
 	uint64_t cycle_ = 0;
@@ -46,6 +46,8 @@ private:
 	Operand FetchOperand(AddressMode m);
 	bool IsSet(Flag f) const;
 	void SetFlag(Flag f, bool active);
+	void PushStack(uint8_t val);
+	uint8_t PopStack();
 };
 
 } // namespace nes
