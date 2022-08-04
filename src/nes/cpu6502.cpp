@@ -341,6 +341,45 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kDEC: {
+			uint8_t res = operand.val - 1;
+			SetFlag(Flag::N, res & 0x80);
+			SetFlag(Flag::Z, res == 0);
+			bus_->Write(operand.addr, res);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 7;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 5;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 6;
+					break;
+				default:;
+			}
+			break;
+		}
+		case Instruction::kDEX: {
+			x_--;
+			SetFlag(Flag::N, x_ & 0x80);
+			SetFlag(Flag::Z, x_ == 0);
+
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kDEY: {
+			y_--;
+			SetFlag(Flag::N, y_ & 0x80);
+			SetFlag(Flag::Z, y_ == 0);
+
+			cycleLeft_ += 2;
+			break;
+		}
     }
 }
 
