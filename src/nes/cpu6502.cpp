@@ -246,6 +246,26 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 2;
 			break;
 		}
+		case Instruction::kCLC: {
+			SetFlag(Flag::C, false);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kCLD: {
+			SetFlag(Flag::D, false);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kCLI: {
+			SetFlag(Flag::I, false);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kCLV: {
+			SetFlag(Flag::V, false);
+			cycleLeft_ += 2;
+			break;
+		}
     }
 }
 
