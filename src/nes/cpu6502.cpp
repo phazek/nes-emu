@@ -453,6 +453,29 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 2;
 			break;
 		}
+		case Instruction::kJMP: {
+			pc_ = operand.addr;
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kIND:
+					cycleLeft_ += 5;
+					break;
+				default:;
+			}
+			break;
+		}
+		case Instruction::kJSR: {
+			auto addr = pc_ - 1;
+			PushStack(addr >> 8); // HH
+			PushStack(addr & 0xFF); // LL
+			pc_ = operand.addr;
+
+			cycleLeft_ += 6;
+			break;
+		}
     }
 }
 
