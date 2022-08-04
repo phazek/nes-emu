@@ -40,6 +40,7 @@ void Cpu6502::Tick() {
     auto opCode = bus_->Read(pc_);
     auto op = kOpDecoder.at(opCode);
     auto operand = FetchOperand(op.addrMode);
+	pc_ += OpSizeByMode(op.addrMode);
 
     switch (op.instr) {
 		case Instruction::kADC: {
@@ -147,6 +148,24 @@ void Cpu6502::Tick() {
 				default:;
 			}
 		    break;
+		}
+		case Instruction::kBCC: {
+			auto oldPc = pc_;
+		    if (!IsSet(Flag::C)) {
+				pc_ += (int8_t)operand.val;
+				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
+		    }
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kBCS: {
+			auto oldPc = pc_;
+		    if (IsSet(Flag::C)) {
+				pc_ += (int8_t)operand.val;
+				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
+		    }
+			cycleLeft_ += 2;
+			break;
 		}
     }
 }
