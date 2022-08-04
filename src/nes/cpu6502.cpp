@@ -41,6 +41,47 @@ void Cpu6502::Tick() {
     auto op = kOpDecoder.at(opCode);
     uint8_t operand;
     bool boundaryCrossed = FetchOperand(op.addrMode, operand);
+
+    switch (op.instr) {
+		case Instruction::kADC: {
+			uint16_t tmp = acc_ + (int8_t)operand + (IsSet(Flag::C) ? 1 : 0);
+			acc_ = tmp & 0xFF;
+
+			SetFlag(Flag::N, acc_ & 0x80);
+			SetFlag(Flag::Z, acc_ == 0);
+			SetFlag(Flag::C, tmp & 0x100);
+			SetFlag(Flag::V, (!((acc_ ^ operand) & 0x80) && ((acc_ ^ tmp) & 0x80)));
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kABY:
+					cycleLeft_ += 4 + (boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kINX:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kINY:
+					cycleLeft_ += 5 + (boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 4;
+					break;
+				default:;
+			}
+			break;
+		}
+    }
 }
 
 bool Cpu6502::FetchOperand(AddressMode m, uint8_t& operand) {
