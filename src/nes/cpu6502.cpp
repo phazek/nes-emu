@@ -219,6 +219,15 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 2;
 			break;
 		}
+		case Instruction::kBRK: {
+			auto addr = pc_ + 1;
+			PushStack(addr >> 8); // HH
+			PushStack(addr & 0xFF); // LL
+			SetFlag(Flag::I, true);
+			PushStack(status_);
+			cycleLeft_ += 7;
+			break;
+		}
     }
 }
 
