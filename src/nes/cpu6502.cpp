@@ -228,6 +228,24 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 7;
 			break;
 		}
+		case Instruction::kBVC: {
+			auto oldPc = pc_;
+		    if (!IsSet(Flag::V)) {
+				pc_ += (int8_t)operand.val;
+				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
+		    }
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kBVS: {
+			auto oldPc = pc_;
+		    if (IsSet(Flag::V)) {
+				pc_ += (int8_t)operand.val;
+				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
+		    }
+			cycleLeft_ += 2;
+			break;
+		}
     }
 }
 
