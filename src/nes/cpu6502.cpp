@@ -1,4 +1,5 @@
 #include "cpu6502.h"
+#include "instructions.h"
 
 namespace nes {
 
@@ -32,6 +33,81 @@ void Cpu6502::Reset() {
 void Cpu6502::Tick() {
 }
 
+bool Cpu6502::FetchOperand(AddressMode m, uint8_t& operand) {
+	switch (m) {
+		case AddressMode::kACC: {
+			operand = 0;
+			return false;
+		}
+		case AddressMode::kABS: {
+			auto LL = bus_->Read(pc_ + 1);
+			auto HH = bus_->Read(pc_ + 2);
+			operand = bus_->Read(Join(LL, HH));
+			return false;
+		}
+		case AddressMode::kABX: {
+			auto LL = bus_->Read(pc_ + 1);
+			auto HH = bus_->Read(pc_ + 2);
+			operand = bus_->Read(Join(LL, HH) + x_);
+			return (uint8_t)(LL + x_) < x_;
+		}
+		case AddressMode::kABY: {
+			auto LL = bus_->Read(pc_ + 1);
+			auto HH = bus_->Read(pc_ + 2);
+			operand = bus_->Read(Join(LL, HH) + y_);
+			return (uint8_t)(LL + y_) < y_;
+		}
+		case AddressMode::kIMM: {
+			operand = bus_->Read(pc_ + 1);
+			return false;
+		}
+		case AddressMode::kIMP: {
+			operand = 0;
+			return false;
+		}
+		case AddressMode::kIND: {
+			auto LL = bus_->Read(pc_ + 1);
+			auto HH = bus_->Read(pc_ + 2);
+			auto addr = Join(LL, HH);
+			LL = bus_->Read(addr);
+			HH = bus_->Read(addr + 1);
+			operand = bus_->Read(Join(LL, HH));
+			return false;
+		}
+		case AddressMode::kINX: {
+			uint16_t addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
+			auto LL = bus_->Read(addr);
+			auto HH = bus_->Read(addr + 1);
+			operand = bus_->Read(Join(LL, HH));
+			return false;
+		}
+		case AddressMode::kINY: {
+			uint16_t addr = bus_->Read(pc_ + 1) & 0xFF;
+			auto LL = bus_->Read(addr);
+			auto HH = bus_->Read(addr + 1);
+			operand = bus_->Read(Join(LL, HH) + y_);
+			return (uint8_t)(LL + y_) < y_;
+		}
+		case AddressMode::kREL: {
+			operand = bus_->Read(pc_ + 1);
+			return ((pc_ + (int8_t)operand) & 0xFF00) != (pc_ & 0xFF00);
+		}
+		case AddressMode::kZP: {
+			uint16_t addr = bus_->Read(pc_ + 1);
+			operand = bus_->Read(addr);
+			return false;
+		}
+		case AddressMode::kZPX: {
+			uint16_t addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
+			operand = bus_->Read(addr);
+			return false;
+		}
+		case AddressMode::kZPY: {
+			uint16_t addr = (bus_->Read(pc_ + 1) + y_) & 0xFF;
+			operand = bus_->Read(addr);
+			return false;
+		}
+	}
 }
 
 bool Cpu6502::IsSet(Flag f) const {

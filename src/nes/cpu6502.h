@@ -4,6 +4,8 @@
 
 namespace nes {
 
+enum class AddressMode;
+
 class Cpu6502 {
 public:
 	Cpu6502(Bus* bus);
@@ -35,6 +37,7 @@ private:
 
 	Bus* bus_ = nullptr;
 
+	bool FetchOperand(AddressMode m, uint8_t& operand);
 	bool IsSet(Flag f) const;
 	void SetFlag(Flag f, bool active);
 };
