@@ -192,9 +192,27 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kBMI: {
+			auto oldPc = pc_;
+		    if (IsSet(Flag::N)) {
+				pc_ += (int8_t)operand.val;
+				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
+		    }
+			cycleLeft_ += 2;
+			break;
+		}
 		case Instruction::kBNE: {
 			auto oldPc = pc_;
 		    if (!IsSet(Flag::Z)) {
+				pc_ += (int8_t)operand.val;
+				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
+		    }
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kBPL: {
+			auto oldPc = pc_;
+		    if (!IsSet(Flag::N)) {
 				pc_ += (int8_t)operand.val;
 				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
 		    }
