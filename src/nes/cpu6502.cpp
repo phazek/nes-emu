@@ -883,6 +883,40 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 2;
 			break;
 		}
+		case Instruction::kTSX: {
+			x_ = stackPtr_;
+			SetFlag(Flag::N, stackPtr_ & 0x80);
+			SetFlag(Flag::Z, stackPtr_ == 0);
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kTXA: {
+			acc_ = x_;
+			SetFlag(Flag::N, x_ & 0x80);
+			SetFlag(Flag::Z, x_ == 0);
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kTXS: {
+			stackPtr_ = x_;
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kTYA: {
+			acc_ = y_;
+			SetFlag(Flag::N, y_ & 0x80);
+			SetFlag(Flag::Z, y_ == 0);
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
     }
 }
 
