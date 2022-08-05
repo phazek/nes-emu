@@ -831,6 +831,40 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kSTX: {
+			bus_->Write(operand.addr, x_);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPY:
+					cycleLeft_ += 4;
+					break;
+				default:;
+			}
+			break;
+		}
+		case Instruction::kSTY: {
+			bus_->Write(operand.addr, y_);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 4;
+					break;
+				default:;
+			}
+			break;
+		}
     }
 }
 
