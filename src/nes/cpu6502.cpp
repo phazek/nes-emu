@@ -659,6 +659,74 @@ void Cpu6502::Tick() {
 		    cycleLeft_ += 4;
 		    break;
 		}
+		case Instruction::kROL: {
+			uint8_t res = operand.val << 1;
+			res |= IsSet(Flag::C) ? 0x01 : 0x00;
+
+			SetFlag(Flag::C, operand.val & 0x80);
+			SetFlag(Flag::N, res & 0x80);
+			SetFlag(Flag::Z, res == 0);
+
+			if (operand.addr == 0xFFFF) {
+				acc_ = res;
+			} else {
+				bus_->Write(operand.addr, res);
+			}
+
+			switch (op.addrMode) {
+				case AddressMode::kACC:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kABS:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 7;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 5;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 6;
+					break;
+				default:;
+			}
+			break;
+		}
+		case Instruction::kROR: {
+			uint8_t res = operand.val >> 1;
+			res |= IsSet(Flag::C) ? 0x80 : 0x00;
+
+			SetFlag(Flag::C, operand.val & 0x01);
+			SetFlag(Flag::N, res & 0x80);
+			SetFlag(Flag::Z, res == 0);
+
+			if (operand.addr == 0xFFFF) {
+				acc_ = res;
+			} else {
+				bus_->Write(operand.addr, res);
+			}
+
+			switch (op.addrMode) {
+				case AddressMode::kACC:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kABS:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 7;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 5;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 6;
+					break;
+				default:;
+			}
+			break;
+		}
     }
 }
 
