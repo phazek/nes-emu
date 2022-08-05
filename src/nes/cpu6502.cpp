@@ -865,6 +865,24 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kTAX: {
+			x_ = acc_;
+			SetFlag(Flag::N, acc_ & 0x80);
+			SetFlag(Flag::Z, acc_ == 0);
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kTAY: {
+			y_ = acc_;
+			SetFlag(Flag::N, acc_ & 0x80);
+			SetFlag(Flag::Z, acc_ == 0);
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
     }
 }
 
