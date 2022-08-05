@@ -632,6 +632,33 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kPHA: {
+			PushStack(acc_);
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 3;
+			break;
+		}
+		case Instruction::kPHP: {
+			PushStack(status_ | Flag::X | Flag::B);
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 3;
+			break;
+		}
+		case Instruction::kPLA: {
+			acc_ = PopStack();
+			SetFlag(Flag::N, acc_ & 0x80);
+			SetFlag(Flag::Z, acc_ == 0);
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 4;
+			break;
+		}
+		case Instruction::kPLP: {
+		    status_ = PopStack() & ~Flag::B | Flag::X;
+		    assert(op.addrMode == AddressMode::kIMP);
+		    cycleLeft_ += 4;
+		    break;
+		}
     }
 }
 
