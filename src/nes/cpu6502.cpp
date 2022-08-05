@@ -783,6 +783,23 @@ void Cpu6502::Tick() {
 				default:;
 			}
 			break;
+		}
+		case Instruction::kSEC: {
+			SetFlag(Flag::C, true);
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kSED: {
+			SetFlag(Flag::D, true);
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
+		case Instruction::kSEI: {
+			SetFlag(Flag::I, true);
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
 			break;
 		}
     }
