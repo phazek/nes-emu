@@ -727,6 +727,25 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kRTI: {
+		    status_ = PopStack() & ~Flag::B | Flag::X;
+			uint16_t addr = PopStack(); // LL
+			addr |= PopStack() << 8; // HH
+			pc_ = addr;
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 6;
+			break;
+		}
+		case Instruction::kRTS: {
+			uint16_t addr = PopStack(); // LL
+			addr |= PopStack() << 8; // HH
+			pc_ = addr + 1;
+
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 6;
+			break;
+		}
     }
 }
 
