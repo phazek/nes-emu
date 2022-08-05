@@ -593,6 +593,11 @@ void Cpu6502::Tick() {
 			}
 		    break;
 		}
+		case Instruction::kNOP: {
+			assert(op.addrMode == AddressMode::kIMP);
+			cycleLeft_ += 2;
+			break;
+		}
     }
 }
 
