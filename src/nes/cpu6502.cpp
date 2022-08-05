@@ -746,6 +746,45 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 6;
 			break;
 		}
+		case Instruction::kSBC: {
+			const uint16_t sum = acc_ + ~operand.val + (IsSet(Flag::C) ? 1 : 0);
+			const uint8_t result = sum & 0xFF;
+			SetFlag(Flag::C, !(sum >> 8));
+			SetFlag(Flag::V, !!((~(acc_ ^ ~operand.val)) & (acc_ ^ result) & 0x80));
+			SetFlag(Flag::N, !!(result & 0x80));
+			SetFlag(Flag::Z, !result);
+			acc_ = result;
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kABY:
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kINX:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kINY:
+					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 4;
+					break;
+				default:;
+			}
+			break;
+			break;
+		}
     }
 }
 
