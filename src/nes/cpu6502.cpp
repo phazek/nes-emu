@@ -1,6 +1,8 @@
 #include "cpu6502.h"
 #include "instructions.h"
 
+#include "tfm/tinyformat.h"
+
 namespace nes {
 
 namespace {
@@ -77,7 +79,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -112,7 +117,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -145,7 +153,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 6;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 		    break;
 		}
@@ -188,7 +199,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZP:
 					cycleLeft_ += 3;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -297,7 +311,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -317,7 +334,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZP:
 					cycleLeft_ += 3;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -337,7 +357,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZP:
 					cycleLeft_ += 3;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -360,7 +383,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 6;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -410,7 +436,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -433,7 +462,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 6;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -463,7 +495,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kIND:
 					cycleLeft_ += 5;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -506,7 +541,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -531,7 +569,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPY:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -556,7 +597,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -589,7 +633,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 6;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 		    break;
 		}
@@ -628,7 +675,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -689,7 +739,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 6;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -723,7 +776,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 6;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -780,7 +836,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -827,7 +886,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -844,7 +906,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPY:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
@@ -861,7 +926,10 @@ void Cpu6502::Tick() {
 				case AddressMode::kZPX:
 					cycleLeft_ += 4;
 					break;
-				default:;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
 			}
 			break;
 		}
