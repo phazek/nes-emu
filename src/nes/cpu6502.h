@@ -6,12 +6,24 @@ namespace nes {
 
 enum class AddressMode;
 
+struct CpuState {
+	uint16_t pc = 0;
+	uint8_t acc = 0;
+	uint8_t x = 0;
+	uint8_t y = 0;
+	uint8_t stackPtr = 0;
+	uint8_t status = 0;
+	uint64_t cycle = 0;
+};
+
 class Cpu6502 {
 public:
 	Cpu6502(Bus* bus);
 
 	void Reset();
 	void Tick();
+
+	const CpuState& GetState() const;
 
 private:
 	enum Flag {
@@ -43,11 +55,15 @@ private:
 
 	Bus* bus_ = nullptr;
 
+	CpuState cpuState_;
+
 	Operand FetchOperand(AddressMode m);
 	bool IsSet(Flag f) const;
 	void SetFlag(Flag f, bool active);
 	void PushStack(uint8_t val);
 	uint8_t PopStack();
+
+	void UpdateState();
 };
 
 } // namespace nes

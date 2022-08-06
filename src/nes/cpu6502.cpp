@@ -33,6 +33,9 @@ void Cpu6502::Reset() {
 }
 
 void Cpu6502::Tick() {
+	UpdateState();
+
+	++cycle_;
     if (cycleLeft_) {
 		cycleLeft_--;
 		return;
@@ -988,6 +991,10 @@ void Cpu6502::Tick() {
     }
 }
 
+const CpuState& Cpu6502::GetState() const {
+	return cpuState_;
+}
+
 Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 	Cpu6502::Operand res;
 	uint16_t addr;
@@ -1124,6 +1131,16 @@ void Cpu6502::PushStack(uint8_t val) {
 
 uint8_t Cpu6502::PopStack() {
 	return bus_->Read(0x100 + ++stackPtr_);
+}
+
+void Cpu6502::UpdateState() {
+	cpuState_.pc = pc_;
+	cpuState_.acc = acc_;
+	cpuState_.x = x_;
+	cpuState_.y = y_;
+	cpuState_.stackPtr = stackPtr_;
+	cpuState_.status = status_;
+	cpuState_.cycle = cycle_;
 }
 
 } // namespace nes
