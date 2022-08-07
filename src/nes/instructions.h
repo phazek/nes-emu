@@ -100,7 +100,8 @@ enum class Instruction {
 	kTYA,
 	// "Illegal" Opcodes
 	kLAX,
-	kSAX
+	kSAX,
+	kUSBC
 };
 
 struct Operation {

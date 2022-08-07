@@ -1065,6 +1065,20 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kUSBC: {
+			const uint16_t sum = acc_ + ~operand.val + (IsSet(Flag::C) ? 1 : 0);
+			const uint8_t result = sum & 0xFF;
+			SetFlag(Flag::C, !(sum >> 8));
+			SetFlag(Flag::V, !!((~(acc_ ^ ~operand.val)) & (acc_ ^ result) & 0x80));
+			SetFlag(Flag::N, !!(result & 0x80));
+			SetFlag(Flag::Z, !result);
+			acc_ = result;
+
+			assert(op.addrMode == AddressMode::kIMM);
+			cycleLeft_ += 2;
+			break;
+		}
+		}
     }
 }
 
