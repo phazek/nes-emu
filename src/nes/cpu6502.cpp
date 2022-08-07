@@ -1042,6 +1042,29 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kSAX: {
+			bus_->Write(operand.addr, acc_ & x_);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kINX:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPY:
+					cycleLeft_ += 4;
+					break;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
+			}
+			break;
+		}
     }
 }
 

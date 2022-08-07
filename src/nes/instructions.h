@@ -99,7 +99,8 @@ enum class Instruction {
 	kTXS,
 	kTYA,
 	// "Illegal" Opcodes
-	kLAX
+	kLAX,
+	kSAX
 };
 
 struct Operation {
@@ -293,6 +294,10 @@ const std::unordered_map<int, Operation> kOpDecoder = {{
 	{0x7C, {Instruction::kNOP, AddressMode::kABX}},
 	{0xDC, {Instruction::kNOP, AddressMode::kABX}},
 	{0xFC, {Instruction::kNOP, AddressMode::kABX}},
+	{0x87, {Instruction::kSAX, AddressMode::kZP}},
+	{0x97, {Instruction::kSAX, AddressMode::kZPY}},
+	{0x8F, {Instruction::kSAX, AddressMode::kABS}},
+	{0x83, {Instruction::kSAX, AddressMode::kINX}},
 }};
 
 } // namespace nes
