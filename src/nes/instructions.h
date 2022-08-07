@@ -116,7 +116,7 @@ const std::unordered_map<int, Operation> kOpDecoder = {{
 	{0x0D, {Instruction::kORA, AddressMode::kABS}},
 	{0x0E, {Instruction::kASL, AddressMode::kABS}},
 	{0x10, {Instruction::kBPL, AddressMode::kREL}},
-	{0x11, {Instruction::kORA, AddressMode::kIND}},
+	{0x11, {Instruction::kORA, AddressMode::kINY}},
 	{0x15, {Instruction::kORA, AddressMode::kZPX}},
 	{0x16, {Instruction::kASL, AddressMode::kZPX}},
 	{0x18, {Instruction::kCLC, AddressMode::kIMP}},
