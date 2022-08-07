@@ -1052,7 +1052,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			auto HH = bus_->Read(pc_ + 2);
 			auto addr = Join(LL, HH);
 			LL = bus_->Read(addr);
-			HH = bus_->Read(addr + 1);
+			HH = bus_->Read((uint16_t)HH << 8 | ((addr + 1) & 0xFF));
 			addr = Join(LL, HH);
 
 			res.val = bus_->Read(addr);
@@ -1061,9 +1061,9 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			break;
 		}
 		case AddressMode::kINX: {
-			addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
-			auto LL = bus_->Read(addr);
-			auto HH = bus_->Read(addr + 1);
+			addr = bus_->Read(pc_ + 1) + x_;
+			auto LL = bus_->Read(addr & 0xFF);
+			auto HH = bus_->Read((addr + 1) & 0xFF);
 			auto addr = Join(LL, HH);
 			res.val = bus_->Read(addr);
 			res.addr = addr;
@@ -1071,9 +1071,9 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			break;
 		}
 		case AddressMode::kINY: {
-			addr = bus_->Read(pc_ + 1) & 0xFF;
-			auto LL = bus_->Read(addr);
-			auto HH = bus_->Read(addr + 1);
+			addr = bus_->Read(pc_ + 1);
+			auto LL = bus_->Read(addr & 0xFF);
+			auto HH = bus_->Read((addr + 1) & 0xFF);
 			auto addr = Join(LL, HH) + y_;
 
 			res.val = bus_->Read(addr);
