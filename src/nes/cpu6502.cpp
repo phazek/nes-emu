@@ -644,8 +644,30 @@ void Cpu6502::Tick() {
 		    break;
 		}
 		case Instruction::kNOP: {
-			cycleLeft_ += 2;
-			assert(op.addrMode == AddressMode::kIMP);
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kIMM:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kIMP:
+					cycleLeft_ += 2;
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 4;
+					break;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
+			}
 			break;
 		}
 		case Instruction::kORA: {
