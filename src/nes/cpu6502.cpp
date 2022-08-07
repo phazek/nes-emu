@@ -1010,6 +1010,38 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 2;
 			break;
 		}
+		// "Illegal" Opcodes and Undocumented Instructions
+		case Instruction::kLAX: {
+			acc_ = x_ = operand.val;
+			SetFlag(Flag::N, acc_ & 0x80);
+			SetFlag(Flag::Z, acc_ == 0);
+
+			switch (op.addrMode) {
+				case AddressMode::kABS:
+					cycleLeft_ += 4;
+					break;
+				case AddressMode::kABY:
+					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kINX:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kINY:
+					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+					break;
+				case AddressMode::kZP:
+					cycleLeft_ += 3;
+					break;
+				case AddressMode::kZPY:
+					cycleLeft_ += 4;
+					break;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
+			}
+			break;
+		}
     }
 }
 

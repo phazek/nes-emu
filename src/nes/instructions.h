@@ -98,6 +98,8 @@ enum class Instruction {
 	kTXA,
 	kTXS,
 	kTYA,
+	// "Illegal" Opcodes
+	kLAX
 };
 
 struct Operation {
@@ -258,6 +260,12 @@ const std::unordered_map<int, Operation> kOpDecoder = {{
 	{0xFD, {Instruction::kSBC, AddressMode::kABX}},
 	{0xFE, {Instruction::kINC, AddressMode::kABX}},
 // "Illegal" Opcodes and Undocumented Instructions
+	{0xA7, {Instruction::kLAX, AddressMode::kZP}},
+	{0xB7, {Instruction::kLAX, AddressMode::kZPY}},
+	{0xAF, {Instruction::kLAX, AddressMode::kABS}},
+	{0xBF, {Instruction::kLAX, AddressMode::kABY}},
+	{0xA3, {Instruction::kLAX, AddressMode::kINX}},
+	{0xB3, {Instruction::kLAX, AddressMode::kINY}},
 	{0x1A, {Instruction::kNOP, AddressMode::kIMP}},
 	{0x3A, {Instruction::kNOP, AddressMode::kIMP}},
 	{0x5A, {Instruction::kNOP, AddressMode::kIMP}},
