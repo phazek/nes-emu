@@ -1,13 +1,8 @@
 #include "bus.h"
 
+#include "utils.h"
+
 namespace nes {
-
-namespace {
-bool IsInRange(uint16_t beg, uint16_t end, uint16_t val) {
-	return (beg <= val) && (val <= end);
-}
-
-} // namespace
 
 uint8_t Bus::Read(uint16_t addr) {
 	if (IsInRange(0x0000, 0x17FF, addr)) { // internal memory
