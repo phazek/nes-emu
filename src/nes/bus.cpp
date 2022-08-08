@@ -23,6 +23,9 @@ uint8_t Bus::Read(uint16_t addr) {
 
 	}
 	if (IsInRange(0x4020, 0xFFFF, addr)) { // Cartridge
+		if (cartridge_) {
+			return cartridge_->ReadPrg(addr);
+		}
 	}
 
 	return 0;
@@ -46,6 +49,8 @@ void Bus::Write(uint16_t addr, uint8_t val) {
 	}
 }
 
+void Bus::InsertCartridge(Cartridge* cart) {
+	cartridge_ = cart;
 }
 
 } // namespace nes
