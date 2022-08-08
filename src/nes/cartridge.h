@@ -1,5 +1,11 @@
 #pragma once
 
+#include "mappers/mapperbase.h"
+
+#include <string>
+#include <memory>
+#include <cstdint>
+
 namespace nes {
 
 class Cartridge {
@@ -10,6 +16,13 @@ public:
 	void WritePrg(uint16_t addr, uint8_t val);
 	uint8_t ReadChar(uint16_t addr);
 	void WriteChar(uint16_t addr, uint8_t val);
+private:
+
+	std::unique_ptr<uint8_t[]> buffer_;
+	size_t bufferSize_ = 0;
+
+	RomDescriptor descriptor_;
+	std::unique_ptr<mapper::MapperBase> mapper_;
 };
 
 } // namespace nes
