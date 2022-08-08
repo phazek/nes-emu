@@ -38,6 +38,11 @@ bool Cartridge::LoadFile(const std::string& filePath) {
 		return false;
 	}
 
+	if (!Init()) {
+		buffer_.reset();
+		return false;
+	}
+
 	return true;
 }
 
@@ -49,9 +54,51 @@ void Cartridge::WritePrg(uint16_t addr, uint8_t val) {
 }
 
 uint8_t Cartridge::ReadChar(uint16_t addr) {
+	assert(addr < descriptor_.chrRomSize);
+	return buffer_[descriptor_.chrRomStart + addr];
 }
 
 void Cartridge::WriteChar(uint16_t addr, uint8_t val) {
 
 }
+
+bool Cartridge::Init() {
+	// Check magic number
+	if (memcmp(buffer_.get(), kMagicNumber.data(), kMagicNumber.size()) != 0) {
+		tfm::printf("ERROR: magic number not found");
+		return false;
+	}
+
+	descriptor_.prgRomSize = buffer_[4] * 0x4000;
+	descriptor_.prgRomStart = kHeaderSize;
+	descriptor_.chrRomSize = buffer_[5] * 0x2000;
+	descriptor_.chrRomStart = descriptor_.prgRomStart + descriptor_.prgRomSize;
+
+	auto flag6 = buffer_[6];
+	descriptor_.mirrorType = flag6 & 0x01
+					 ? RomDescriptor::Mirroring::kVertical
+					 : RomDescriptor::Mirroring::kHorizontal;
+	descriptor_.hasBatteryBackedRAM = flag6 & 0x02;
+	descriptor_.hasTrainer = flag6 & 0x04;
+	if (descriptor_.hasTrainer) {
+		descriptor_.prgRomStart += 512;
+		descriptor_.chrRomStart += 512;
+	}
+
+	descriptor_.hasFourScreenVRAM = flag6 & 0x08;
+	descriptor_.mapperType = (flag6 & 0xF0) >> 4;
+
+	auto flag7 = buffer_[7];
+	descriptor_.mapperType |= flag7 & 0xF0;
+
+	auto totalRomSize = descriptor_.prgRomStart + descriptor_.prgRomSize + descriptor_.chrRomSize;
+	if (totalRomSize > bufferSize_)
+	{
+		tfm::printf("ERROR: header-content size mismatch (%d <> %d)", totalRomSize, bufferSize_);
+		return false;
+	}
+
+	return true;
+}
+
 } // namespace nes

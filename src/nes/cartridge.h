@@ -23,6 +23,8 @@ private:
 
 	RomDescriptor descriptor_;
 	std::unique_ptr<mapper::MapperBase> mapper_;
+
+	bool Init();
 };
 
 } // namespace nes
