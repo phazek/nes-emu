@@ -107,6 +107,7 @@ enum class Instruction {
 	kSLO,
 	kRLA,
 	kSRE,
+	kRRA,
 };
 
 struct Operation {
@@ -340,6 +341,13 @@ const std::unordered_map<int, Operation> kOpDecoder = {{
 	{0x5B, {Instruction::kSRE, AddressMode::kABY}},
 	{0x43, {Instruction::kSRE, AddressMode::kINX}},
 	{0x53, {Instruction::kSRE, AddressMode::kINY}},
+	{0x67, {Instruction::kRRA, AddressMode::kZP}},
+	{0x77, {Instruction::kRRA, AddressMode::kZPX}},
+	{0x6F, {Instruction::kRRA, AddressMode::kABS}},
+	{0x7F, {Instruction::kRRA, AddressMode::kABX}},
+	{0x7B, {Instruction::kRRA, AddressMode::kABY}},
+	{0x63, {Instruction::kRRA, AddressMode::kINX}},
+	{0x73, {Instruction::kRRA, AddressMode::kINY}},
 }};
 
 } // namespace nes

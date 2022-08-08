@@ -1270,6 +1270,49 @@ void Cpu6502::Tick() {
 			}
 			break;
 		}
+		case Instruction::kRRA: {
+			uint8_t shiftRes = operand.val >> 1;
+			shiftRes |= IsSet(Flag::C) ? 0x80 : 0x00;
+			SetFlag(Flag::C, operand.val & 0x01);
+			bus_->Write(operand.addr, shiftRes);
+
+			const uint16_t sum = acc_ + shiftRes + (IsSet(Flag::C) ? 1 : 0);
+			const uint8_t addRes = sum & 0xFF;
+			SetFlag(Flag::C, sum >> 8);
+			SetFlag(Flag::V, !!((acc_ ^ addRes) & (shiftRes ^ addRes) & 0x80));
+			SetFlag(Flag::N, !!(addRes & 0x80));
+			SetFlag(Flag::Z, !addRes);
+			acc_ = addRes;
+
+			switch (op.addrMode) {
+				case AddressMode::kZP:
+					cycleLeft_ += 5;
+					break;
+				case AddressMode::kZPX:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kABS:
+					cycleLeft_ += 6;
+					break;
+				case AddressMode::kABX:
+					cycleLeft_ += 7;
+					break;
+				case AddressMode::kABY:
+					cycleLeft_ += 7;
+					break;
+				case AddressMode::kINX:
+					cycleLeft_ += 8;
+					break;
+				case AddressMode::kINY:
+					cycleLeft_ += 8;
+					break;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
+			}
+			break;
+		}
     }
 }
 
