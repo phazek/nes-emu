@@ -19,27 +19,9 @@ enum class AddressMode {
 	kZPX,
 	kZPY,
 };
+const std::string ToString(AddressMode m);
 
-constexpr int OpSizeByMode(AddressMode m) {
-	switch (m) {
-	    case AddressMode::kIMP:
-	    case AddressMode::kACC:
-			return 1;
-	    case AddressMode::kIMM:
-	    case AddressMode::kINX:
-	    case AddressMode::kINY:
-	    case AddressMode::kREL:
-	    case AddressMode::kZP:
-	    case AddressMode::kZPX:
-	    case AddressMode::kZPY:
-			return 2;
-	    case AddressMode::kABS:
-	    case AddressMode::kABX:
-	    case AddressMode::kABY:
-	    case AddressMode::kIND:
-			return 3;
-	}
-}
+int OpSizeByMode(AddressMode m);
 
 enum class Instruction {
 	kADC,
@@ -109,6 +91,7 @@ enum class Instruction {
 	kSRE,
 	kRRA,
 };
+std::string ToString(Instruction ins);
 
 struct Operation {
 	Instruction instr;
