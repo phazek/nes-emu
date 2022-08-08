@@ -1,5 +1,6 @@
 #include "cartridge.h"
 #include "tfm/tinyformat.h"
+#include "mappers/mapperfactory.h"
 
 #include <array>
 #include <fstream>
@@ -16,7 +17,7 @@ bool Cartridge::LoadFile(const std::string& filePath) {
 	std::ifstream input{filePath, std::ios::binary};
 
 	if (!input.is_open()) {
-		tfm::printf("ERROR: failed to open rom file: %s", filePath);
+		tfm::printf("ERROR: failed to open rom file: %s\n", filePath);
 		return false;
 	}
 
@@ -27,13 +28,13 @@ bool Cartridge::LoadFile(const std::string& filePath) {
 	input.seekg( 0, std::ios::beg);
 
 	if (bufferSize_ < kHeaderSize) {
-		tfm::printf("ERROR: invalid rom file size: %d bytes", bufferSize_);
+		tfm::printf("ERROR: invalid rom file size: %d bytes\n", bufferSize_);
 		return false;
 	}
 
 	buffer_ = std::make_unique<uint8_t[]>(fsize);
 	if (!input.read(reinterpret_cast<char*>(buffer_.get()), bufferSize_)) {
-		tfm::printf("ERROR: unable to read entire file (%d/%d read)", input.gcount(), fsize);
+		tfm::printf("ERROR: unable to read entire file (%d/%d read)\n", input.gcount(), fsize);
 		buffer_.reset();
 		return false;
 	}
@@ -47,25 +48,25 @@ bool Cartridge::LoadFile(const std::string& filePath) {
 }
 
 uint8_t Cartridge::ReadPrg(uint16_t addr) {
+	return mapper_->ReadPrg(addr);
 }
 
 void Cartridge::WritePrg(uint16_t addr, uint8_t val) {
-
+	mapper_->WritePrg(addr, val);
 }
 
 uint8_t Cartridge::ReadChar(uint16_t addr) {
-	assert(addr < descriptor_.chrRomSize);
-	return buffer_[descriptor_.chrRomStart + addr];
+	return mapper_->ReadChar(addr);
 }
 
 void Cartridge::WriteChar(uint16_t addr, uint8_t val) {
-
+	mapper_->WriteChar(addr, val);
 }
 
 bool Cartridge::Init() {
 	// Check magic number
 	if (memcmp(buffer_.get(), kMagicNumber.data(), kMagicNumber.size()) != 0) {
-		tfm::printf("ERROR: magic number not found");
+		tfm::printf("ERROR: magic number not found\n");
 		return false;
 	}
 
@@ -94,7 +95,13 @@ bool Cartridge::Init() {
 	auto totalRomSize = descriptor_.prgRomStart + descriptor_.prgRomSize + descriptor_.chrRomSize;
 	if (totalRomSize > bufferSize_)
 	{
-		tfm::printf("ERROR: header-content size mismatch (%d <> %d)", totalRomSize, bufferSize_);
+		tfm::printf("ERROR: header-content size mismatch (%d <> %d)\n", totalRomSize, bufferSize_);
+		return false;
+	}
+
+	mapper_.reset(mapper::MapperFactory::CreateMapper(buffer_.get(), bufferSize_, descriptor_));
+	if (!mapper_) {
+		tfm::printf("ERROR: failed to create mapper\n");
 		return false;
 	}
 
