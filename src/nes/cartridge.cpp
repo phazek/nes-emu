@@ -2,7 +2,7 @@
 
 namespace nes {
 
-bool Cartridge::LoadFile(std::string filePath) {
+bool Cartridge::LoadFile(const std::string& filePath) {
 	return true;
 }
 
