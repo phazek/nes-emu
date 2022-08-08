@@ -1078,6 +1078,41 @@ void Cpu6502::Tick() {
 			cycleLeft_ += 2;
 			break;
 		}
+		case Instruction::kDCP: {
+			bus_->Write(operand.addr, operand.val - 1);
+			auto res = acc_ - operand.val + 1;
+			SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
+			SetFlag(Flag::Z, (res & 0xFF) == 0);
+			SetFlag(Flag::C, res >= 0);
+
+			switch (op.addrMode) {
+			    case AddressMode::kZP:
+					cycleLeft_ += 5;
+					break;
+			    case AddressMode::kZPX:
+					cycleLeft_ += 6;
+					break;
+			    case AddressMode::kABS:
+					cycleLeft_ += 6;
+					break;
+			    case AddressMode::kABX:
+					cycleLeft_ += 7;
+					break;
+			    case AddressMode::kABY:
+					cycleLeft_ += 7;
+					break;
+			    case AddressMode::kINX:
+					cycleLeft_ += 8;
+					break;
+			    case AddressMode::kINY:
+					cycleLeft_ += 8;
+					break;
+				default: {
+					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+					assert(false);
+				}
+			}
+			break;
 		}
     }
 }
