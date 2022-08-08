@@ -1123,7 +1123,7 @@ const CpuState& Cpu6502::GetState() const {
 
 Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 	Cpu6502::Operand res;
-	uint16_t addr;
+	uint16_t addr = 0;
 	switch (m) {
 		case AddressMode::kACC: {
 			res.val = acc_;
@@ -1134,7 +1134,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 		case AddressMode::kABS: {
 			auto LL = bus_->Read(pc_ + 1);
 			auto HH = bus_->Read(pc_ + 2);
-			auto addr = Join(LL, HH);
+			addr = Join(LL, HH);
 
 			res.val = bus_->Read(addr);
 			res.addr = addr;
@@ -1144,7 +1144,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 		case AddressMode::kABX: {
 			auto LL = bus_->Read(pc_ + 1);
 			auto HH = bus_->Read(pc_ + 2);
-			auto addr = Join(LL, HH) + x_;
+			addr = Join(LL, HH) + x_;
 
 			res.val = bus_->Read(addr);
 			res.addr = addr;
@@ -1176,7 +1176,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 		case AddressMode::kIND: {
 			auto LL = bus_->Read(pc_ + 1);
 			auto HH = bus_->Read(pc_ + 2);
-			auto addr = Join(LL, HH);
+			addr = Join(LL, HH);
 			LL = bus_->Read(addr);
 			HH = bus_->Read((uint16_t)HH << 8 | ((addr + 1) & 0xFF));
 			addr = Join(LL, HH);
@@ -1190,7 +1190,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			addr = bus_->Read(pc_ + 1) + x_;
 			auto LL = bus_->Read(addr & 0xFF);
 			auto HH = bus_->Read((addr + 1) & 0xFF);
-			auto addr = Join(LL, HH);
+			addr = Join(LL, HH);
 			res.val = bus_->Read(addr);
 			res.addr = addr;
 			res.boundaryCrossed = false;
@@ -1200,7 +1200,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			addr = bus_->Read(pc_ + 1);
 			auto LL = bus_->Read(addr & 0xFF);
 			auto HH = bus_->Read((addr + 1) & 0xFF);
-			auto addr = Join(LL, HH) + y_;
+			addr = Join(LL, HH) + y_;
 
 			res.val = bus_->Read(addr);
 			res.addr = addr;
