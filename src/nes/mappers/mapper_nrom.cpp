@@ -46,7 +46,7 @@ void Mapper_NROM::WritePrg(uint16_t addr, uint8_t val) {
 }
 
 uint8_t Mapper_NROM::ReadChar(uint16_t addr) {
-	return buffer_[descriptor_.chrRomStart];
+	return buffer_[descriptor_.chrRomStart + addr];
 }
 
 void Mapper_NROM::WriteChar(uint16_t addr, uint8_t val) {
