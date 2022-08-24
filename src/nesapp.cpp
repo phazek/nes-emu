@@ -11,7 +11,8 @@ constexpr float kPPUTickDuration = 1.f / kPPUFrequency; // s
 
 NesApp::NesApp()
 : bus_()
-, cpu_(&bus_) {
+, cpu_(&bus_)
+, ppu_(&bus_) {
 	sAppName = "NesEmu";
 }
 
@@ -52,6 +53,7 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 		tickIndex_ %= 2; // CPU ticks on every 3rd PPU tick
 		timeUntilTick_ = tickDuration_ * 0.1f;
 	}
+	ppu_.Tick();
 
 	return true;
 }

@@ -8,10 +8,12 @@ class Bus;
 
 class Ppu2C02 {
 public:
+	Ppu2C02(Bus* bus);
+
 	uint8_t Read(uint16_t addr);
 	void Write(uint16_t addr, uint8_t val);
 
-	void AttachBus(Bus* bus);
+	void Tick();
 private:
 	Bus* bus_ = nullptr;
 };
