@@ -1,6 +1,8 @@
 #include "ppu.h"
 
 #include "bus.h"
+#include "utils.h"
+
 #include <tfm/tinyformat.h>
 
 namespace nes {
@@ -50,18 +52,101 @@ Ppu2C02::Ppu2C02(Bus* bus)
 }
 
 uint8_t Ppu2C02::Read(uint16_t addr) {
-	// TODO
 	tfm::printf("PPU read %s (0x%04X)\n", AddressToString(addr), addr);
+	switch (addr) {
+		case kPPUCTRL: {
+			// write-only
+			break;
+		}
+		case kPPUMASK: {
+			// write-only
+			break;
+		}
+		case kPPUSTATUS: {
+			auto tmp = status_;
+			status_ &= 0x7F;
+			return tmp;
+		}
+		case kOAMADDR: {
+			// write-only
+			break;
+		}
+		case kOAMDATA: {
+
+		}
+		case kPPUSCROLL: {
+			// write-only
+			break;
+		}
+		case kPPUADDR: {
+			// write-only
+			break;
+		}
+		case kPPUDATA: {
+
+		}
+		default: {
+			assert(false);
+		}
+	}
 	return 0;
 }
 
 void Ppu2C02::Write(uint16_t addr, uint8_t val) {
-	// TODO
 	tfm::printf("PPU write %s (0x%04X) -> 0x%02X\n", AddressToString(addr), addr, val);
+	switch (addr) {
+		case kPPUCTRL: {
+			ParseControlMessage(val);
+			break;
+		}
+		case kPPUMASK: {
+			break;
+		}
+		case kPPUSTATUS: {
+			// read-only
+			break;
+		}
+		case kOAMADDR: {
+			break;
+		}
+		case kOAMDATA: {
+			break;
+		}
+		case kPPUSCROLL: {
+			break;
+		}
+		case kPPUADDR: {
+			break;
+		}
+		case kPPUDATA: {
+
+		}
+		default: {
+			assert(false);
+		}
+	}
 }
 
 void Ppu2C02::Tick() {
 	// TODO
+}
+
+void Ppu2C02::ParseControlMessage(uint8_t val) {
+	switch (val & 0x03) {
+		case 0x00: controlState_.baseNameTableAddr = 0x2000; break;
+		case 0x01: controlState_.baseNameTableAddr = 0x2400; break;
+		case 0x02: controlState_.baseNameTableAddr = 0x2800; break;
+		case 0x03: controlState_.baseNameTableAddr = 0x2C00; break;
+	}
+
+	controlState_.addressIncrement = (val & 0x04) ? 32 : 1;
+	controlState_.spriteTableAddr = (val & 0x08) ? 0x1000 : 0x0000;
+	controlState_.backgroundTableAddr = (val & 0x10) ? 0x1000 : 0x0000;
+	controlState_.spriteSize =
+	    (val & 0x20) ? ControlState::SpriteSize::k8x16 : ControlState::SpriteSize::k8x8;
+	controlState_.select =
+	    (val & 0x40) ? ControlState::Select::kOutput : ControlState::Select::kInput;
+	controlState_.generateNMI = !!(val & 0x80);
 }
 
 } // namespace nes
