@@ -34,7 +34,19 @@ private:
 		bool generateNMI = false;
 	} controlState_;
 
+	struct MaskState {
+		bool grayscale : 1 = false;
+		bool showBackgroundLeft : 1 = false;
+		bool showSpritesLeft : 1 = false;
+		bool showBackground : 1 = false;
+		bool showSprites : 1 = false;
+		bool emphasizeRed : 1 = false;
+		bool emphasizeGreen : 1 = false;
+		bool emphasizeBlue : 1 = false;
+	} maskState_;
+
 	void ParseControlMessage(uint8_t val);
+	void ParseMaskMessage(uint8_t val);
 };
 
 } // namespace nes

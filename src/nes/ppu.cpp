@@ -100,6 +100,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kPPUMASK: {
+			ParseMaskMessage(val);
 			break;
 		}
 		case kPPUSTATUS: {
@@ -147,6 +148,18 @@ void Ppu2C02::ParseControlMessage(uint8_t val) {
 	controlState_.select =
 	    (val & 0x40) ? ControlState::Select::kOutput : ControlState::Select::kInput;
 	controlState_.generateNMI = !!(val & 0x80);
+}
+
+void Ppu2C02::ParseMaskMessage(uint8_t val) {
+	maskState_.grayscale = !!(val & 0x01);
+	maskState_.showBackgroundLeft = !!(val & 0x02);
+	maskState_.showSpritesLeft = !!(val & 0x04);
+	maskState_.showBackground = !!(val & 0x08);
+	maskState_.showSprites = !!(val & 0x10);
+	// TODO: PAL/NTSC
+	maskState_.emphasizeRed = !!(val & 0x20);
+	maskState_.emphasizeGreen = !!(val & 0x40);
+	maskState_.emphasizeBlue = !!(val & 0x80);
 }
 
 } // namespace nes
