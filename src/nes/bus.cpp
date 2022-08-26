@@ -2,6 +2,7 @@
 
 #include "ppu.h"
 #include "utils.h"
+#include "types.h"
 
 namespace nes {
 
