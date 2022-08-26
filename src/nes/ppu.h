@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include "types.h"
+#include <array>
+#include <vector>
+
+#include "palette.h"
 
 namespace nes {
 
@@ -20,6 +23,12 @@ public:
 private:
 	Bus* bus_ = nullptr;
 	RGBA* frameBuffer_ = nullptr;
+
+	using Palette = std::array<RGBA, 4>;
+	struct FramePalette {
+		std::array<Palette, 4> backgroundPalettes;
+		std::array<Palette, 4> spritePalettes;
+	} framePalette_;
 	uint8_t status_ = 0;
 
 	uint32_t dotIdx_ = 0;
