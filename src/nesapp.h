@@ -21,6 +21,6 @@ private:
 	Ppu2C02 ppu_;
 	uint8_t tickIndex_ = 0;
 	bool paused_ = false;
-	float tickDuration_ = 0.5f;
-	float timeUntilTick_ = 0.5f;
+	float tickDuration_ = 0.f;
+	float timeToRun_ = 0.f;
 };
