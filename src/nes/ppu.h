@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "types.h"
 
 namespace nes {
 
@@ -13,9 +14,12 @@ public:
 	uint8_t Read(uint16_t addr);
 	void Write(uint16_t addr, uint8_t val);
 
+	void SetFramebuffer(Color* buf);
+
 	void Tick();
 private:
 	Bus* bus_ = nullptr;
+	Color* frameBuffer_ = nullptr;
 	uint8_t status_ = 0;
 
 	uint32_t dotIdx_ = 0;

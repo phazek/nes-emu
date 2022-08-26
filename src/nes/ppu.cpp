@@ -134,6 +134,10 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 	}
 }
 
+void Ppu2C02::SetFramebuffer(Color* buf) {
+	frameBuffer_ = buf;
+}
+
 void Ppu2C02::Tick() {
 	uint32_t newDot = (dotIdx_ + 1) % (kScanlineRowCount * kScanlineColCount);
 
