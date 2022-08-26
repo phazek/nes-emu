@@ -21,6 +21,10 @@ constexpr uint16_t kPPUDATA = 0x2007;   // READ/WRITE
 constexpr uint16_t kScanlineRowCount = 262;
 constexpr uint16_t kScanlineColCount = 341;
 
+constexpr std::array<uint16_t, 2> kPatternTableStart = {0x0000, 0x1000};
+constexpr std::array<uint16_t, 4> kNameTableStart = {0x2000, 0x2400, 0x2800, 0x2C00};
+constexpr uint16_t kPaletteTableStart = 0x3F00;
+
 std::string AddressToString(uint16_t addr) {
     switch (addr) {
 	case kPPUCTRL:
@@ -86,8 +90,16 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 			break;
 		}
 		case kPPUDATA: {
-
-			break;
+			uint16_t addr = vramAddress_;
+			if (IsInRange(0x3000, 0x3EFF, addr)) {
+				addr -= 0x1000;
+			}
+			if (IsInRange(0x3F20, 0x3FFF, addr)) {
+				addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
+			}
+			auto tmp = vramStorage_[addr];
+			vramAddress_ += controlState_.addressIncrement;
+			return tmp;
 		}
 		default: {
 			assert(false);
@@ -123,10 +135,20 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kPPUADDR: {
+			vramAddress_ <<= 8;
+			vramAddress_ |= val;
 			break;
 		}
 		case kPPUDATA: {
-
+			uint16_t addr = vramAddress_;
+			if (IsInRange(0x3000, 0x3EFF, addr)) {
+				addr -= 0x1000;
+			}
+			if (IsInRange(0x3F20, 0x3FFF, addr)) {
+				addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
+			}
+			vramStorage_[addr] = val;
+			vramAddress_ += controlState_.addressIncrement;
 			break;
 		}
 		default: {
@@ -162,13 +184,7 @@ void Ppu2C02::Tick() {
 }
 
 void Ppu2C02::ParseControlMessage(uint8_t val) {
-	switch (val & 0x03) {
-		case 0x00: controlState_.baseNameTableAddr = 0x2000; break;
-		case 0x01: controlState_.baseNameTableAddr = 0x2400; break;
-		case 0x02: controlState_.baseNameTableAddr = 0x2800; break;
-		case 0x03: controlState_.baseNameTableAddr = 0x2C00; break;
-	}
-
+	controlState_.baseNameTableAddr = kNameTableStart[val & 0x03];
 	controlState_.addressIncrement = (val & 0x04) ? 32 : 1;
 	controlState_.spriteTableAddr = (val & 0x08) ? 0x1000 : 0x0000;
 	controlState_.backgroundTableAddr = (val & 0x10) ? 0x1000 : 0x0000;

@@ -24,17 +24,11 @@ private:
 	Bus* bus_ = nullptr;
 	RGBA* frameBuffer_ = nullptr;
 
-	using Palette = std::array<RGBA, 4>;
-	struct FramePalette {
-		std::array<Palette, 4> backgroundPalettes;
-		std::array<Palette, 4> spritePalettes;
-	} framePalette_;
-
-	std::array<uint8_t, 0x20 * 0x1E> nameTable_;
-	std::array<uint8_t, 0x08 * 0x08> attributeTable_;
-
 	uint8_t oamAddress_ = 0;
 	std::array<uint8_t, 0xFF> oamStorage_;
+
+	uint16_t vramAddress_ = 0;
+	std::array<uint8_t, 0x4000> vramStorage_;
 
 	uint8_t status_ = 0;
 
