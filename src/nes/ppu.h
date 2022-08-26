@@ -14,12 +14,12 @@ public:
 	uint8_t Read(uint16_t addr);
 	void Write(uint16_t addr, uint8_t val);
 
-	void SetFramebuffer(Color* buf);
+	void SetFramebuffer(RGBA* buf);
 
 	void Tick();
 private:
 	Bus* bus_ = nullptr;
-	Color* frameBuffer_ = nullptr;
+	RGBA* frameBuffer_ = nullptr;
 	uint8_t status_ = 0;
 
 	uint32_t dotIdx_ = 0;

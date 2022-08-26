@@ -134,7 +134,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 	}
 }
 
-void Ppu2C02::SetFramebuffer(Color* buf) {
+void Ppu2C02::SetFramebuffer(RGBA* buf) {
 	frameBuffer_ = buf;
 }
 
