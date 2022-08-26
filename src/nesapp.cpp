@@ -12,13 +12,17 @@ constexpr float kPPUTickDuration = 1.f / kPPUFrequency; // s
 NesApp::NesApp()
 : bus_()
 , cpu_(&bus_)
-, ppu_(&bus_) {
+, ppu_(&bus_)
+, frameBufferSprite_(256, 240) {
 	sAppName = "NesEmu";
 }
 
 bool NesApp::OnUserCreate() {
 	cpu_.Reset();
 	tickDuration_ = kPPUTickDuration;
+
+	ppu_.SetFramebuffer(reinterpret_cast<RGBA*>(frameBufferSprite_.GetData()));
+
 	return true;
 }
 
@@ -55,6 +59,8 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 	DrawString(10, y++ * 10, tfm::format("P:   0x%02X", state.status));
 	DrawString(10, y++ * 10, tfm::format("CYC: %06d", state.cycle));
 	DrawLine(0, y * 10, 120, y * 10, olc::WHITE);
+
+	DrawSprite(121, 0, &frameBufferSprite_, 2);
 
 	return true;
 }

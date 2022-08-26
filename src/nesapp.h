@@ -23,4 +23,6 @@ private:
 	bool paused_ = false;
 	float tickDuration_ = 0.f;
 	float timeToRun_ = 0.f;
+
+	olc::Sprite frameBufferSprite_;
 };
