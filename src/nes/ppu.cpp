@@ -75,8 +75,7 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 			break;
 		}
 		case kOAMDATA: {
-
-			break;
+			return oamStorage_[oamAddress_];
 		}
 		case kPPUSCROLL: {
 			// write-only
@@ -117,6 +116,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kOAMDATA: {
+			oamStorage_[oamAddress_++] = val;
 			break;
 		}
 		case kPPUSCROLL: {
