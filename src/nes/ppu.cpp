@@ -18,6 +18,9 @@ constexpr uint16_t kPPUSCROLL = 0x2005; // WRITE x2
 constexpr uint16_t kPPUADDR = 0x2006;   // WRITE x2
 constexpr uint16_t kPPUDATA = 0x2007;   // READ/WRITE
 
+constexpr uint16_t kScanlineRowCount = 262;
+constexpr uint16_t kScanlineColCount = 341;
+
 std::string AddressToString(uint16_t addr) {
     switch (addr) {
 	case kPPUCTRL:
@@ -52,7 +55,7 @@ Ppu2C02::Ppu2C02(Bus* bus)
 }
 
 uint8_t Ppu2C02::Read(uint16_t addr) {
-	tfm::printf("PPU read %s (0x%04X)\n", AddressToString(addr), addr);
+	//tfm::printf("PPU read %s (0x%04X)\n", AddressToString(addr), addr);
 	switch (addr) {
 		case kPPUCTRL: {
 			// write-only
@@ -73,6 +76,7 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 		}
 		case kOAMDATA: {
 
+			break;
 		}
 		case kPPUSCROLL: {
 			// write-only
@@ -84,6 +88,7 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 		}
 		case kPPUDATA: {
 
+			break;
 		}
 		default: {
 			assert(false);
@@ -93,7 +98,7 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 }
 
 void Ppu2C02::Write(uint16_t addr, uint8_t val) {
-	tfm::printf("PPU write %s (0x%04X) -> 0x%02X\n", AddressToString(addr), addr, val);
+	//tfm::printf("PPU write %s (0x%04X) -> 0x%02X\n", AddressToString(addr), addr, val);
 	switch (addr) {
 		case kPPUCTRL: {
 			ParseControlMessage(val);
@@ -121,6 +126,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 		}
 		case kPPUDATA: {
 
+			break;
 		}
 		default: {
 			assert(false);
@@ -129,7 +135,24 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 }
 
 void Ppu2C02::Tick() {
-	// TODO
+	uint32_t newDot = (dotIdx_ + 1) % (kScanlineRowCount * kScanlineColCount);
+
+	if (newDot == 0) {
+		oddFrame_ = !oddFrame_;
+		if (oddFrame_) { // Skip first dot on odd frame
+			++newDot;
+		}
+	}
+
+	if (newDot == (240 * kScanlineColCount + 1)) { // Set VBLANK
+		status_ |= 0x80;
+	}
+
+	if (newDot == (260 * kScanlineColCount + 1)) { // Clear VBLANK
+		status_ &= 0x7F;
+	}
+
+	dotIdx_ = newDot;
 }
 
 void Ppu2C02::ParseControlMessage(uint8_t val) {

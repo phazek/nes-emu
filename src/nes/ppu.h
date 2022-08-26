@@ -18,6 +18,9 @@ private:
 	Bus* bus_ = nullptr;
 	uint8_t status_ = 0;
 
+	uint32_t dotIdx_ = 0;
+	bool oddFrame_ = false;
+
 	struct ControlState {
 		uint16_t baseNameTableAddr;
 		uint16_t spriteTableAddr;
