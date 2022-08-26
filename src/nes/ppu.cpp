@@ -113,6 +113,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kOAMADDR: {
+			oamAddress_ = val;
 			break;
 		}
 		case kOAMDATA: {

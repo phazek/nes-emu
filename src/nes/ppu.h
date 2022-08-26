@@ -32,6 +32,8 @@ private:
 
 	std::array<uint8_t, 0x20 * 0x1E> nameTable_;
 	std::array<uint8_t, 0x08 * 0x08> attributeTable_;
+	std::array<uint8_t, 0xFF> oamStorage_;
+	uint8_t oamAddress_ = 0;
 
 	uint8_t status_ = 0;
 
