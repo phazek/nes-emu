@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.h"
+
 #include <cstdint>
 #include <array>
 
@@ -9,6 +11,10 @@ struct RGB {
 	uint8_t r;
 	uint8_t g;
 	uint8_t b;
+
+	RGBA ToRGBA() {
+		return {r, g, b, 255};
+	}
 };
 
 constexpr std::array<RGB, 0x40> kColorPalette = {
