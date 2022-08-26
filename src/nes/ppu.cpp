@@ -152,8 +152,9 @@ void Ppu2C02::Tick() {
 		status_ |= 0x80;
 	}
 
-	if (newDot == (260 * kScanlineColCount + 1)) { // Clear VBLANK
-		status_ &= 0x7F;
+	if (newDot == (260 * kScanlineColCount + 1)) {
+		// Clear VBLANK, SPRITE0 hit and sprite overflow flags
+		status_ = 0x00;
 	}
 
 	dotIdx_ = newDot;
