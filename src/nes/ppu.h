@@ -28,11 +28,13 @@ private:
 	std::array<uint8_t, 0xFF> oamStorage_;
 
 	uint16_t vramAddress_ = 0;
+	uint8_t vramBuffer_ = 0;
 	std::array<uint8_t, 0x0800> vramStorage_;
 
 	using Palette = std::array<uint8_t, 4>;
 	std::array<Palette, 8> framePalette_;
 
+	uint16_t scrollBuffer_ = 0;
 	uint8_t status_ = 0;
 
 	uint32_t dotIdx_ = 0;
@@ -42,7 +44,7 @@ private:
 		uint16_t baseNameTableAddr;
 		uint16_t spriteTableAddr;
 		uint16_t backgroundTableAddr;
-		uint16_t addressIncrement;
+		uint16_t addressIncrement = 0;
 		enum SpriteSize {
 			k8x8,
 			k8x16,

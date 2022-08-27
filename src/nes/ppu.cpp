@@ -56,6 +56,7 @@ Ppu2C02::Ppu2C02(Bus* bus)
 : bus_(bus)
 {
 	bus_->AttachPPU(this);
+	memset(vramStorage_.data(), 0, 0x0800);
 }
 
 uint8_t Ppu2C02::Read(uint16_t addr) {
@@ -72,6 +73,10 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 		case kPPUSTATUS: {
 			auto tmp = status_;
 			status_ &= 0x7F;
+
+			vramBuffer_ = 0;
+			scrollBuffer_ = 0;
+
 			return tmp;
 		}
 		case kOAMADDR: {
@@ -123,6 +128,8 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kPPUSCROLL: {
+			scrollBuffer_ <<= 8;
+			scrollBuffer_ |= val;
 			break;
 		}
 		case kPPUADDR: {
@@ -156,6 +163,9 @@ void Ppu2C02::Tick() {
 
 	if (newDot == (240 * kScanlineColCount + 1)) { // Set VBLANK
 		status_ |= 0x80;
+		if (controlState_.generateNMI) {
+			bus_->TriggerNMI();
+		}
 	}
 
 	if (newDot == (260 * kScanlineColCount + 1)) {
@@ -243,7 +253,12 @@ uint8_t Ppu2C02::HandleDataRead() {
 		result = framePalette_[palIdx][colorIdx];
 	}
 
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x00FF, addr)) {
+		vramBuffer_ = result ;
+	}
+
 	vramAddress_ += controlState_.addressIncrement;
+	std::swap(vramBuffer_, result);
 	return result;
 }
 
