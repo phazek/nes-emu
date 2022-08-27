@@ -90,16 +90,7 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 			break;
 		}
 		case kPPUDATA: {
-			uint16_t addr = vramAddress_;
-			if (IsInRange(0x3000, 0x3EFF, addr)) {
-				addr -= 0x1000;
-			}
-			if (IsInRange(0x3F20, 0x3FFF, addr)) {
-				addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
-			}
-			auto tmp = vramStorage_[addr];
-			vramAddress_ += controlState_.addressIncrement;
-			return tmp;
+			return HandleDataRead();
 		}
 		default: {
 			assert(false);
@@ -140,15 +131,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kPPUDATA: {
-			uint16_t addr = vramAddress_;
-			if (IsInRange(0x3000, 0x3EFF, addr)) {
-				addr -= 0x1000;
-			}
-			if (IsInRange(0x3F20, 0x3FFF, addr)) {
-				addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
-			}
-			vramStorage_[addr] = val;
-			vramAddress_ += controlState_.addressIncrement;
+			HandleDataWrite(val);
 			break;
 		}
 		default: {
@@ -205,6 +188,115 @@ void Ppu2C02::ParseMaskMessage(uint8_t val) {
 	maskState_.emphasizeRed = !!(val & 0x20);
 	maskState_.emphasizeGreen = !!(val & 0x40);
 	maskState_.emphasizeBlue = !!(val & 0x80);
+}
+
+uint8_t Ppu2C02::HandleDataRead() {
+	auto addr = vramAddress_;
+	uint8_t result = 0;
+
+	// Pattern table 0
+	if (IsInRange(kPatternTableStart[0], kPatternTableStart[0] + 0x0FFF, addr)) {
+		result = bus_->ReadChr(addr - kPatternTableStart[0]);
+	}
+
+	// Pattern table 1
+	if (IsInRange(kPatternTableStart[1], kPatternTableStart[1] + 0x0FFF, addr)) {
+		result = bus_->ReadChr(addr - kPatternTableStart[1]);
+	}
+
+	// Mirror 0x2000-0x2EFF
+	if (IsInRange(0x3000, 0x3EFF, addr)) {
+		addr -= 0x1000;
+	}
+
+	// Nametable 0
+	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + 0x03FF, addr)) {
+		result = vramStorage_[addr - kNameTableStart[0]];
+	}
+
+	// Nametable 1
+	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
+		result = vramStorage_[addr - kNameTableStart[1]];
+	}
+
+	// Nametable 2
+	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + 0x03FF, addr)) {
+		// TODO
+		result = 0;
+	}
+
+	// Nametable 3
+	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + 0x03FF, addr)) {
+		// TODO
+		result = 0;
+	}
+
+	// Mirror 0x3F00-0x3F1F
+	if (IsInRange(0x3F20, 0x3FFF, addr)) {
+		addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
+	}
+	// Palette indexes
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x0020, addr)) {
+		auto idx = addr - kPaletteTableStart;
+		auto palIdx = idx / 4;
+		auto colorIdx = idx % 4;
+		result = framePalette_[palIdx][colorIdx];
+	}
+
+	vramAddress_ += controlState_.addressIncrement;
+	return result;
+}
+
+void Ppu2C02::HandleDataWrite(uint8_t val) {
+	auto addr = vramAddress_;
+	// Pattern table 0
+	if (IsInRange(kPatternTableStart[0], kPatternTableStart[0] + 0x0FFF, addr)) {
+		//bus_->WriteChr(addr - kPatternTableStart[0], val);
+	}
+
+	// Pattern table 1
+	if (IsInRange(kPatternTableStart[1], kPatternTableStart[1] + 0x0FFF, addr)) {
+		//bus_->WriteChr(addr - kPatternTableStart[1], val);
+	}
+
+	// Mirror 0x2000-0x2EFF
+	if (IsInRange(0x3000, 0x3EFF, addr)) {
+		addr -= 0x1000;
+	}
+
+	// Nametable 0
+	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + 0x03FF, addr)) {
+		vramStorage_[addr - kNameTableStart[0]] = val;
+	}
+
+	// Nametable 1
+	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
+		vramStorage_[addr - kNameTableStart[1]] = val;
+	}
+
+	// Nametable 2
+	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + 0x03FF, addr)) {
+		// TODO
+	}
+
+	// Nametable 3
+	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + 0x03FF, addr)) {
+		// TODO
+	}
+
+	// Mirror 0x3F00-0x3F1F
+	if (IsInRange(0x3F20, 0x3FFF, addr)) {
+		addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
+	}
+	// Palette indexes
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x0020, addr)) {
+		auto idx = addr - kPaletteTableStart;
+		auto palIdx = idx / 4;
+		auto colorIdx = idx % 4;
+		framePalette_[palIdx][colorIdx] = val;
+	}
+
+	vramAddress_ += controlState_.addressIncrement;
 }
 
 } // namespace nes

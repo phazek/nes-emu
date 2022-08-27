@@ -28,7 +28,10 @@ private:
 	std::array<uint8_t, 0xFF> oamStorage_;
 
 	uint16_t vramAddress_ = 0;
-	std::array<uint8_t, 0x4000> vramStorage_;
+	std::array<uint8_t, 0x0800> vramStorage_;
+
+	using Palette = std::array<uint8_t, 4>;
+	std::array<Palette, 8> framePalette_;
 
 	uint8_t status_ = 0;
 
@@ -64,6 +67,8 @@ private:
 
 	void ParseControlMessage(uint8_t val);
 	void ParseMaskMessage(uint8_t val);
+	uint8_t HandleDataRead();
+	void HandleDataWrite(uint8_t val);
 };
 
 } // namespace nes
