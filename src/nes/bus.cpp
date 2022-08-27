@@ -64,4 +64,14 @@ void Bus::AttachPPU(Ppu2C02* ppu) {
 	ppu_ = ppu;
 }
 
+void Bus::TriggerNMI() {
+	triggerNMI_ = true;
+}
+
+bool Bus::CheckNMI() {
+	auto tmp = triggerNMI_;
+	triggerNMI_ = false;
+	return tmp;
+}
+
 } // namespace nes

@@ -41,6 +41,17 @@ void Cpu6502::Tick() {
 		return;
     }
 
+	// Check NMI
+	if (bus_->CheckNMI()) {
+		PushStack(pc_ >> 8); // HH
+		PushStack(pc_ & 0xFF); // LL
+		PushStack(status_);
+
+		auto LL = bus_->Read(kNMIVectorLo);
+		auto HH = bus_->Read(kNMIVectorHi);
+		pc_ = Join(LL, HH);
+	}
+
     // compensate for multi-cycle instructions
     auto opCode = bus_->Read(pc_);
     auto op = kOpDecoder.at(opCode);
