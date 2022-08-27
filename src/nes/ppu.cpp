@@ -46,7 +46,7 @@ std::string AddressToString(uint16_t addr) {
 	case kOAMDMA:
 	    return "OAMDMA(W)";
 	default:
-	    return "<UNKNOWN>";
+	    return tfm::format("<0x%04X>", addr);
     }
 }
 
@@ -139,6 +139,13 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 		}
 		case kPPUDATA: {
 			HandleDataWrite(val);
+			break;
+		}
+		case kOAMDMA: {
+			uint16_t baseAddr = val << 8;
+			for (int i = 0; i < 256; ++i) {
+				oamStorage_[(oamAddress_ + i) % 0xFF] = bus_->Read(baseAddr + i);
+			}
 			break;
 		}
 		default: {

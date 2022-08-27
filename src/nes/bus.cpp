@@ -14,9 +14,6 @@ uint8_t Bus::Read(uint16_t addr) {
 		return ppu_->Read(0x2000 + ((addr - 0x2000) % 0x008));
 	}
 	if (IsInRange(0x4000, 0x4017, addr)) { // APU and I/O registers
-		if (addr == kOAMDMA) {
-			return ppu_->Read(addr);
-		}
 		// TODO
 	}
 	if (IsInRange(0x4018, 0x401F, addr)) { // Test mode
