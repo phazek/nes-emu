@@ -9,6 +9,20 @@ namespace nes {
 
 namespace {
 
+struct Tile {
+	std::array<uint8_t, 8 * 8> data;
+
+	void FromData(const std::array<uint8_t, 16>& src) {
+		for (int row = 0; row < 8; ++row) {
+			for (int col = 0; col < 8; ++col) {
+				bool ll = !!(src[row] & (1 << (7 - col)));
+				bool hh = !!(src[8 + row] & (1 << (7 - col)));
+				data[row * 8 + col] = (hh ? 2 : 0) | (ll ? 1 : 0);
+			}
+		}
+	}
+};
+
 constexpr uint16_t kPPUCTRL = 0x2000;   // WRITE
 constexpr uint16_t kPPUMASK = 0x2001;   // WRITE
 constexpr uint16_t kPPUSTATUS = 0x2002; // READ
@@ -173,6 +187,11 @@ void Ppu2C02::Tick() {
 		if (controlState_.generateNMI) {
 			bus_->TriggerNMI();
 		}
+
+		if (maskState_.showBackground || maskState_.showSprites ||
+			maskState_.showBackgroundLeft || maskState_.showSpritesLeft) {
+			DrawScreen();
+		}
 	}
 
 	if (newDot == (260 * kScanlineColCount + 1)) {
@@ -319,6 +338,67 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 	}
 
 	vramAddress_ += controlState_.addressIncrement;
+}
+
+void Ppu2C02::DrawScreen() {
+	Tile t;
+	const uint16_t nameTableBase = controlState_.baseNameTableAddr - kNameTableStart[0];
+	const uint16_t attrTableBase = nameTableBase + 0x3C0;
+
+	for (int row = 0; row < 30; ++row) {
+		for (int col = 0; col < 32; ++col) {
+			FetchPattern(nameTableBase, row, col);
+			t.FromData(rawTileBuffer_);
+
+			auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
+			for (int i = 0; i < 8*8; ++i) {
+				auto colorIdx = framePalette_[paletteIdx][t.data[i]];
+				auto c = kColorPalette[colorIdx];
+				frameBuffer_[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = c;
+			}
+		}
+	}
+}
+
+void Ppu2C02::DrawPalette() {
+	int baseX = 20, baseY = 20;
+
+	for (int palIdx = 0; palIdx < 8; ++palIdx) {
+		auto pal = framePalette_[palIdx];
+		for (int colorIdx = 0; colorIdx < 4; ++colorIdx) {
+			auto color = kColorPalette[pal[colorIdx]];
+			for (int r = 0; r < 20; ++r) {
+				for (int c = 0; c < 20; ++c) {
+					auto pixelIdx = (baseY + palIdx * 20 + r) * 256 + baseX + colorIdx * 20 + c;
+					frameBuffer_[pixelIdx] = color;
+				}
+			}
+		}
+	}
+}
+
+void Ppu2C02::FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col) {
+	auto idx = nameTableBase + row * 32 + col;
+	auto patternIdx = vramStorage_[idx];
+	auto patternStartAddr = controlState_.backgroundTableAddr + patternIdx * 16;
+
+	for (int i = 0; i < 16; ++i) {
+		rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);
+	}
+}
+
+uint8_t Ppu2C02::GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col) {
+	auto attr = vramStorage_[attrTableBase + (row / 4) * 8 + (col / 4)];
+	auto tmp = ((row % 2) << 1) & (col % 2);
+	switch (tmp) {
+		case 0: return attr & 0x03;
+		case 1: return (attr & 0x0C) >> 2;
+		case 2: return (attr & 0x30) >> 4;
+		case 3: return (attr & 0xC0) >> 6;
+		default: {
+			return 0;
+		}
+	}
 }
 
 } // namespace nes

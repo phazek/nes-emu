@@ -34,6 +34,8 @@ private:
 	using Palette = std::array<uint8_t, 4>;
 	std::array<Palette, 8> framePalette_;
 
+	std::array<uint8_t, 16> rawTileBuffer_;
+
 	uint16_t scrollBuffer_ = 0;
 	uint8_t status_ = 0;
 
@@ -71,6 +73,11 @@ private:
 	void ParseMaskMessage(uint8_t val);
 	uint8_t HandleDataRead();
 	void HandleDataWrite(uint8_t val);
+
+	void FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col);
+	uint8_t GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col);
+	void DrawScreen();
+	void DrawPalette();
 };
 
 } // namespace nes
