@@ -73,7 +73,7 @@ Ppu2C02::Ppu2C02(Bus* bus)
 	memset(vramStorage_.data(), 0, 0x0800);
 }
 
-uint8_t Ppu2C02::Read(uint16_t addr) {
+uint8_t Ppu2C02::Read(uint16_t addr, bool silent) {
 	//tfm::printf("PPU read %s (0x%04X)\n", AddressToString(addr), addr);
 	switch (addr) {
 		case kPPUCTRL: {
@@ -86,10 +86,13 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 		}
 		case kPPUSTATUS: {
 			auto tmp = status_;
-			status_ &= 0x7F;
 
-			vramBuffer_ = 0;
-			scrollBuffer_ = 0;
+			if (!silent) {
+			    status_ &= 0x7F;
+
+			    vramBuffer_ = 0;
+			    scrollBuffer_ = 0;
+			}
 
 			return tmp;
 		}
@@ -109,7 +112,7 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 			break;
 		}
 		case kPPUDATA: {
-			return HandleDataRead();
+			return HandleDataRead(silent);
 		}
 		default: {
 			tfm::printf("ERROR: PPU read from %s\n", AddressToString(addr));
@@ -227,7 +230,11 @@ void Ppu2C02::ParseMaskMessage(uint8_t val) {
 	maskState_.emphasizeBlue = !!(val & 0x80);
 }
 
-uint8_t Ppu2C02::HandleDataRead() {
+uint8_t Ppu2C02::HandleDataRead(bool silent) {
+	if (silent) {
+		return vramBuffer_;
+	}
+
 	auto addr = vramAddress_;
 	uint8_t result = 0;
 

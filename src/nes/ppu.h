@@ -14,7 +14,7 @@ class Ppu2C02 {
 public:
 	Ppu2C02(Bus* bus);
 
-	uint8_t Read(uint16_t addr);
+	uint8_t Read(uint16_t addr, bool silent);
 	void Write(uint16_t addr, uint8_t val);
 
 	void SetFramebuffer(RGBA* buf);
@@ -71,7 +71,7 @@ private:
 
 	void ParseControlMessage(uint8_t val);
 	void ParseMaskMessage(uint8_t val);
-	uint8_t HandleDataRead();
+	uint8_t HandleDataRead(bool silent);
 	void HandleDataWrite(uint8_t val);
 
 	void FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col);

@@ -1346,7 +1346,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			auto HH = bus_->Read(pc_ + 2);
 			addr = Join(LL, HH);
 
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = false;
 			break;
@@ -1356,7 +1356,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			auto HH = bus_->Read(pc_ + 2);
 			addr = Join(LL, HH) + x_;
 
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = (uint8_t)(LL + x_) < x_;
 			break;
@@ -1366,7 +1366,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			auto HH = bus_->Read(pc_ + 2);
 			auto addr = Join(LL, HH) + y_;
 
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = (uint8_t)(LL + y_) < y_;
 			break;
@@ -1391,7 +1391,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			HH = bus_->Read((uint16_t)HH << 8 | ((addr + 1) & 0xFF));
 			addr = Join(LL, HH);
 
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = false;
 			break;
@@ -1401,7 +1401,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			auto LL = bus_->Read(addr & 0xFF);
 			auto HH = bus_->Read((addr + 1) & 0xFF);
 			addr = Join(LL, HH);
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = false;
 			break;
@@ -1412,7 +1412,7 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 			auto HH = bus_->Read((addr + 1) & 0xFF);
 			addr = Join(LL, HH) + y_;
 
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = (uint8_t)(LL + y_) < y_;
 			break;
@@ -1425,21 +1425,21 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 		}
 		case AddressMode::kZP: {
 			addr = bus_->Read(pc_ + 1);
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = false;
 			break;
 		}
 		case AddressMode::kZPX: {
 			addr = (bus_->Read(pc_ + 1) + x_) & 0xFF;
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = false;
 			break;
 		}
 		case AddressMode::kZPY: {
 			addr = (bus_->Read(pc_ + 1) + y_) & 0xFF;
-			res.val = bus_->Read(addr);
+			res.val = bus_->Read(addr, true);
 			res.addr = addr;
 			res.boundaryCrossed = false;
 			break;

@@ -6,12 +6,12 @@
 
 namespace nes {
 
-uint8_t Bus::Read(uint16_t addr) {
+uint8_t Bus::Read(uint16_t addr, bool silent) {
 	if (IsInRange(0x0000, 0x17FF, addr)) { // internal memory
 		return memory_[addr % 0x0800];
 	}
 	if (IsInRange(0x2000, 0x3FFF, addr)) { // PPU registers
-		return ppu_->Read(0x2000 + ((addr - 0x2000) % 0x008));
+		return ppu_->Read(0x2000 + ((addr - 0x2000) % 0x008), silent);
 	}
 	if (IsInRange(0x4000, 0x4017, addr)) { // APU and I/O registers
 		// TODO

@@ -11,7 +11,7 @@ class Ppu2C02;
 
 class Bus {
 public:
-	uint8_t Read(uint16_t addr);
+	uint8_t Read(uint16_t addr, bool silent = false);
 	void Write(uint16_t addr, uint8_t val);
 
 	uint8_t ReadChr(uint16_t addr);
