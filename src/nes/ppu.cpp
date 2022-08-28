@@ -112,6 +112,7 @@ uint8_t Ppu2C02::Read(uint16_t addr) {
 			return HandleDataRead();
 		}
 		default: {
+			tfm::printf("ERROR: PPU read from %s\n", AddressToString(addr));
 			assert(false);
 		}
 	}
