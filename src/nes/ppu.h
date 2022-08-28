@@ -12,12 +12,16 @@ class Bus;
 
 class Ppu2C02 {
 public:
+	using Palette = std::array<uint8_t, 4>;
+
 	Ppu2C02(Bus* bus);
 
 	uint8_t Read(uint16_t addr, bool silent);
 	void Write(uint16_t addr, uint8_t val);
 
 	void SetFramebuffer(RGBA* buf);
+
+	const std::array<Palette, 8>& GetFramePalette() const;
 
 	void Tick();
 private:
@@ -31,7 +35,6 @@ private:
 	uint8_t vramBuffer_ = 0;
 	std::array<uint8_t, 0x0800> vramStorage_;
 
-	using Palette = std::array<uint8_t, 4>;
 	std::array<Palette, 8> framePalette_;
 
 	std::array<uint8_t, 16> rawTileBuffer_;

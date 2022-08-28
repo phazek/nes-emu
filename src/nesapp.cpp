@@ -59,6 +59,22 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 	DrawString(10, y++ * 10, tfm::format("P:   0x%02X", state.status));
 	DrawString(10, y++ * 10, tfm::format("CYC: %06d", state.cycle));
 	DrawLine(0, y * 10, 120, y * 10, olc::WHITE);
+	++y;
+
+	// Display palette
+	DrawString(10, y++ * 10, "Palettes");
+	auto& framePal = ppu_.GetFramePalette();
+
+	for (int palIdx = 0; palIdx < 8; ++palIdx) {
+		auto& pal = framePal[palIdx];
+		for (int colorIdx = 0; colorIdx < 4; ++colorIdx) {
+			uint8_t colorId = pal[colorIdx];
+			auto c = kColorPalette[colorId];
+			FillRect(colorIdx * 30, y * 10, 30, 30, {c.r, c.g, c.b, c.a});
+			DrawString(colorIdx * 30 + 10, y * 10 + 10, tfm::format("%02X", colorId), olc::Pixel(255 - c.r, 255 - c.g, 255 - c.b, 255));
+		}
+		y += 3;
+	}
 
 	DrawSprite(121, 0, &frameBufferSprite_, 2);
 

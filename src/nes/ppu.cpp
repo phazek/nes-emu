@@ -176,6 +176,10 @@ void Ppu2C02::SetFramebuffer(RGBA* buf) {
 	frameBuffer_ = buf;
 }
 
+const std::array<Ppu2C02::Palette, 8>& Ppu2C02::GetFramePalette() const {
+	return framePalette_;
+}
+
 void Ppu2C02::Tick() {
 	uint32_t newDot = (dotIdx_ + 1) % (kScanlineRowCount * kScanlineColCount);
 
