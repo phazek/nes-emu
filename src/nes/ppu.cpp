@@ -39,6 +39,13 @@ constexpr std::array<uint16_t, 2> kPatternTableStart = {0x0000, 0x1000};
 constexpr std::array<uint16_t, 4> kNameTableStart = {0x2000, 0x2400, 0x2800, 0x2C00};
 constexpr uint16_t kPaletteTableStart = 0x3F00;
 
+struct OAMEntry {
+	uint8_t y;
+	uint8_t id;
+	uint8_t attr;
+	uint8_t x;
+};
+
 std::string AddressToString(uint16_t addr) {
     switch (addr) {
 	case kPPUCTRL:
@@ -196,10 +203,7 @@ void Ppu2C02::Tick() {
 			bus_->TriggerNMI();
 		}
 
-		if (maskState_.showBackground || maskState_.showSprites ||
-			maskState_.showBackgroundLeft || maskState_.showSpritesLeft) {
-			DrawScreen();
-		}
+		DrawScreen();
 	}
 
 	if (newDot == (260 * kScanlineColCount + 1)) {
@@ -354,39 +358,57 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 
 void Ppu2C02::DrawScreen() {
 	Tile t;
-	const uint16_t nameTableBase = controlState_.baseNameTableAddr - kNameTableStart[0];
-	const uint16_t attrTableBase = nameTableBase + 0x3C0;
+	if (maskState_.showBackground || maskState_.showBackgroundLeft) {
+		const uint16_t nameTableBase = controlState_.baseNameTableAddr - kNameTableStart[0];
+		const uint16_t attrTableBase = nameTableBase + 0x3C0;
 
-	for (int row = 0; row < 30; ++row) {
-		for (int col = 0; col < 32; ++col) {
-			FetchPattern(nameTableBase, row, col);
-			t.FromData(rawTileBuffer_);
+		for (int row = 0; row < 30; ++row) {
+			for (int col = 0; col < 32; ++col) {
+				FetchPattern(nameTableBase, row, col);
+				t.FromData(rawTileBuffer_);
 
-			auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
-			for (int i = 0; i < 8*8; ++i) {
-				auto colorIdx = framePalette_[paletteIdx][t.data[i]];
-				auto c = kColorPalette[colorIdx];
-				frameBuffer_[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = c;
-			}
-		}
-	}
-}
-
-void Ppu2C02::DrawPalette() {
-	int baseX = 20, baseY = 20;
-
-	for (int palIdx = 0; palIdx < 8; ++palIdx) {
-		auto pal = framePalette_[palIdx];
-		for (int colorIdx = 0; colorIdx < 4; ++colorIdx) {
-			auto color = kColorPalette[pal[colorIdx]];
-			for (int r = 0; r < 20; ++r) {
-				for (int c = 0; c < 20; ++c) {
-					auto pixelIdx = (baseY + palIdx * 20 + r) * 256 + baseX + colorIdx * 20 + c;
-					frameBuffer_[pixelIdx] = color;
+				auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
+				for (int i = 0; i < 8*8; ++i) {
+					auto colorIdx = framePalette_[paletteIdx][t.data[i]];
+					auto c = kColorPalette[colorIdx];
+					frameBuffer_[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = c;
 				}
 			}
 		}
 	}
+
+	if (maskState_.showSprites || maskState_.showSpritesLeft) {
+		auto* entries = reinterpret_cast<OAMEntry*>(oamStorage_.data());
+		for (int i = 0; i < 64; ++i) {
+			auto& entry = entries[i];
+			if (entry.y >= 0xEF || entry.x >= 240) {
+				continue;
+			}
+
+			auto patternStartAddr = controlState_.spriteTableAddr + entry.id * 16;
+			for (int i = 0; i < 16; ++i) {
+				rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);
+			}
+			t.FromData(rawTileBuffer_);
+			for (int i = 0; i < 8*8; ++i) {
+				if (t.data[i] == 0) { // transparent pixel
+					continue;
+				}
+				auto colorIdx = framePalette_[4 + (entry.attr & 0x03)][t.data[i]];
+				auto c = kColorPalette[colorIdx];
+				int x = i % 8;
+				int y = i / 8;
+				if (entry.attr & 0x40) { // horizontal flip
+					x = 7 - x;
+				}
+				if (entry.attr & 0x80) { // vertical flip
+					y = 7 - y;
+				}
+				frameBuffer_[(entry.y + 1 + y) * 256 + entry.x + x] = c;
+			}
+		}
+	}
+
 }
 
 void Ppu2C02::FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col) {

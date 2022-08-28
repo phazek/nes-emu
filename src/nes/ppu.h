@@ -80,7 +80,6 @@ private:
 	void FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col);
 	uint8_t GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col);
 	void DrawScreen();
-	void DrawPalette();
 };
 
 } // namespace nes
