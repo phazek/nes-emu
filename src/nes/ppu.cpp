@@ -162,7 +162,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 		case kOAMDMA: {
 			uint16_t baseAddr = val << 8;
 			for (int i = 0; i < 256; ++i) {
-				oamStorage_[(oamAddress_ + i) % 0xFF] = bus_->Read(baseAddr + i);
+				oamStorage_[oamAddress_++] = bus_->Read(baseAddr + i);
 			}
 			break;
 		}
