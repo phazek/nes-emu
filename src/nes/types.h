@@ -13,5 +13,10 @@ struct RGBA {
 
 // Constants
 constexpr uint16_t kOAMDMA = 0x4014;
+constexpr uint16_t kScanlineRowCount = 262;
+constexpr uint16_t kScanlineColCount = 341;
+constexpr uint16_t kScreenRowCount = 240;
+constexpr uint16_t kScreenColCount = 256;
+
 
 } // namespace nes

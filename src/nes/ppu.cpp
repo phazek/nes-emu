@@ -32,9 +32,6 @@ constexpr uint16_t kPPUSCROLL = 0x2005; // WRITE x2
 constexpr uint16_t kPPUADDR = 0x2006;   // WRITE x2
 constexpr uint16_t kPPUDATA = 0x2007;   // READ/WRITE
 
-constexpr uint16_t kScanlineRowCount = 262;
-constexpr uint16_t kScanlineColCount = 341;
-
 constexpr std::array<uint16_t, 2> kPatternTableStart = {0x0000, 0x1000};
 constexpr std::array<uint16_t, 4> kNameTableStart = {0x2000, 0x2400, 0x2800, 0x2C00};
 constexpr uint16_t kPaletteTableStart = 0x3F00;
