@@ -216,7 +216,7 @@ void Ppu2C02::Tick() {
 }
 
 void Ppu2C02::ParseControlMessage(uint8_t val) {
-	controlState_.baseNameTableAddr = kNameTableStart[val & 0x03];
+	controlState_.nameTableId = val & 0x03;
 	controlState_.addressIncrement = (val & 0x04) ? 32 : 1;
 	controlState_.spriteTableAddr = (val & 0x08) ? 0x1000 : 0x0000;
 	controlState_.backgroundTableAddr = (val & 0x10) ? 0x1000 : 0x0000;
@@ -360,7 +360,10 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 void Ppu2C02::DrawScreen() {
 	Tile t;
 	if (maskState_.showBackground || maskState_.showBackgroundLeft) {
-		const uint16_t nameTableBase = controlState_.baseNameTableAddr - kNameTableStart[0];
+		const uint16_t nameTableBase =
+			kNameTableStart[controlState_.nameTableId] -
+			kNameTableStart[0];
+
 		const uint16_t attrTableBase = nameTableBase + 0x3C0;
 
 		for (int row = 0; row < 30; ++row) {

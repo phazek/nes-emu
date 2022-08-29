@@ -46,7 +46,7 @@ private:
 	bool oddFrame_ = false;
 
 	struct ControlState {
-		uint16_t baseNameTableAddr;
+		uint16_t nameTableId = 0;
 		uint16_t spriteTableAddr;
 		uint16_t backgroundTableAddr;
 		uint16_t addressIncrement = 0;
