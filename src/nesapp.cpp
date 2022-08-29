@@ -23,6 +23,7 @@ bool NesApp::OnUserCreate() {
 
 	ppu_.SetFramebuffer(reinterpret_cast<RGBA*>(frameBufferSprite_.GetData()));
 
+	bus_.AttachController(&con1_, true);
 	return true;
 }
 
@@ -33,6 +34,24 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 	    tickDuration_ *= 2;
 	if (GetKey(olc::Key::PGUP).bReleased)
 		tickDuration_ /= 2;
+
+
+	if (GetKey(olc::Key::A).bPressed) con1_.PressButton(Controller::Button::kStart);
+	if (GetKey(olc::Key::A).bReleased) con1_.ReleaseButton(Controller::Button::kStart);
+	if (GetKey(olc::Key::S).bPressed) con1_.PressButton(Controller::Button::kSelect);
+	if (GetKey(olc::Key::S).bReleased) con1_.ReleaseButton(Controller::Button::kSelect);
+	if (GetKey(olc::Key::Z).bPressed) con1_.PressButton(Controller::Button::kA);
+	if (GetKey(olc::Key::Z).bReleased) con1_.ReleaseButton(Controller::Button::kA);
+	if (GetKey(olc::Key::X).bPressed) con1_.PressButton(Controller::Button::kB);
+	if (GetKey(olc::Key::X).bReleased) con1_.ReleaseButton(Controller::Button::kB);
+	if (GetKey(olc::Key::UP).bPressed) con1_.PressButton(Controller::Button::kUp);
+	if (GetKey(olc::Key::UP).bReleased) con1_.ReleaseButton(Controller::Button::kUp);
+	if (GetKey(olc::Key::DOWN).bPressed) con1_.PressButton(Controller::Button::kDown);
+	if (GetKey(olc::Key::DOWN).bReleased) con1_.ReleaseButton(Controller::Button::kDown);
+	if (GetKey(olc::Key::LEFT).bPressed) con1_.PressButton(Controller::Button::kLeft);
+	if (GetKey(olc::Key::LEFT).bReleased) con1_.ReleaseButton(Controller::Button::kLeft);
+	if (GetKey(olc::Key::RIGHT).bPressed) con1_.PressButton(Controller::Button::kRight);
+	if (GetKey(olc::Key::RIGHT).bReleased) con1_.ReleaseButton(Controller::Button::kRight);
 
 	timeToRun_ += paused_ ? 0.f : fElapsedTime;
 

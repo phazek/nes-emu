@@ -4,6 +4,7 @@
 #include "nes/cpu6502.h"
 #include "nes/ppu.h"
 #include "nes/cartridge.h"
+#include "nes/controller.h"
 
 using namespace nes;
 
@@ -19,6 +20,7 @@ private:
 	Bus bus_;
 	Cpu6502 cpu_;
 	Ppu2C02 ppu_;
+	Controller con1_;
 	uint8_t tickIndex_ = 0;
 	bool paused_ = false;
 	float tickDuration_ = 0.f;
