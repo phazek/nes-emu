@@ -4,6 +4,7 @@
 #include <array>
 
 #include "cartridge.h"
+#include "controller.h"
 
 namespace nes {
 
@@ -18,11 +19,14 @@ public:
 
 	void InsertCartridge(Cartridge* cart);
 	void AttachPPU(Ppu2C02* ppu);
+	void AttachController(Controller* con, bool playerOne);
 	void TriggerNMI();
 	bool CheckNMI();
 private:
 	Cartridge* cartridge_ = nullptr;
 	Ppu2C02* ppu_ = nullptr;
+	Controller* controller1_ = nullptr;
+	Controller* controller2_ = nullptr;
 	bool triggerNMI_ = false;
 
 	std::array<uint8_t, 2048> memory_;

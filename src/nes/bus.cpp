@@ -14,7 +14,12 @@ uint8_t Bus::Read(uint16_t addr, bool silent) {
 		return ppu_->Read(0x2000 + ((addr - 0x2000) % 0x008), silent);
 	}
 	if (IsInRange(0x4000, 0x4017, addr)) { // APU and I/O registers
-		// TODO
+		if (addr == 0x4016 && controller1_) {
+			return controller1_->Read();
+		}
+		if (addr == 0x4017 && controller2_) {
+			return controller2_->Read();
+		}
 	}
 	if (IsInRange(0x4018, 0x401F, addr)) { // Test mode
 
@@ -39,7 +44,15 @@ void Bus::Write(uint16_t addr, uint8_t val) {
 		if (addr == kOAMDMA) {
 			ppu_->Write(addr, val);
 		}
-		// TODO
+
+		if (addr == 0x4016) {
+			if (controller1_) {
+				controller1_->Write(val);
+			}
+			if (controller2_) {
+				controller2_->Write(val);
+			}
+		}
 	}
 	if (IsInRange(0x4018, 0x401F, addr)) { // Test mode
 
@@ -59,6 +72,14 @@ void Bus::InsertCartridge(Cartridge* cart) {
 
 void Bus::AttachPPU(Ppu2C02* ppu) {
 	ppu_ = ppu;
+}
+
+void Bus::AttachController(Controller* con, bool playerOne) {
+	if (playerOne) {
+		controller1_ = con;
+	} else {
+		controller2_ = con;
+	}
 }
 
 void Bus::TriggerNMI() {
