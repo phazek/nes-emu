@@ -1325,6 +1325,10 @@ void Cpu6502::Tick() {
 			break;
 		}
     }
+
+	if (bus_->CheckDMA()) {
+		cycleLeft_ += 513 + (pc_ % 2);
+	}
 }
 
 const CpuState& Cpu6502::GetState() const {

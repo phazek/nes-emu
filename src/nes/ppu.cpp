@@ -171,6 +171,7 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			for (int i = 0; i < 256; ++i) {
 				oamStorage_[oamAddress_++] = bus_->Read(baseAddr + i);
 			}
+			bus_->TriggerDMA();
 			break;
 		}
 		default: {

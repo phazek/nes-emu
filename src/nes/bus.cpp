@@ -86,9 +86,19 @@ void Bus::TriggerNMI() {
 	triggerNMI_ = true;
 }
 
+void Bus::TriggerDMA() {
+	triggerDMA_ = true;
+}
+
 bool Bus::CheckNMI() {
 	auto tmp = triggerNMI_;
 	triggerNMI_ = false;
+	return tmp;
+}
+
+bool Bus::CheckDMA() {
+	auto tmp = triggerDMA_;
+	triggerDMA_ = false;
 	return tmp;
 }
 

@@ -21,13 +21,16 @@ public:
 	void AttachPPU(Ppu2C02* ppu);
 	void AttachController(Controller* con, bool playerOne);
 	void TriggerNMI();
+	void TriggerDMA();
 	bool CheckNMI();
+	bool CheckDMA();
 private:
 	Cartridge* cartridge_ = nullptr;
 	Ppu2C02* ppu_ = nullptr;
 	Controller* controller1_ = nullptr;
 	Controller* controller2_ = nullptr;
 	bool triggerNMI_ = false;
+	bool triggerDMA_ = false;
 
 	std::array<uint8_t, 2048> memory_;
 };
