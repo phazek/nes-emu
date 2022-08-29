@@ -189,6 +189,10 @@ void Ppu2C02::Tick() {
 	uint32_t newDot = (dotIdx_ + 1) % (kScanlineRowCount * kScanlineColCount);
 
 	if (newDot == 0) {
+		DrawBackgroundLayers();
+		DrawSpriteLayer();
+		spriteZeroReported_ = false;
+
 		oddFrame_ = !oddFrame_;
 		if (oddFrame_) { // Skip first dot on odd frame
 			++newDot;
@@ -201,7 +205,6 @@ void Ppu2C02::Tick() {
 			bus_->TriggerNMI();
 		}
 
-		DrawScreen();
 	}
 
 	if (newDot == (260 * kScanlineColCount + 1)) {
@@ -210,6 +213,25 @@ void Ppu2C02::Tick() {
 	}
 
 	dotIdx_ = newDot;
+
+	auto col = dotIdx_ % kScanlineColCount;
+	auto row = dotIdx_ / kScanlineColCount;
+	if (col < kScreenColCount && row < kScreenRowCount) {
+		auto idx = row * kScreenColCount + col;
+	    auto bgDot = backgroundBuffers_[controlState_.nameTableId][idx];
+	    frameBuffer_[idx] = bgDot.color;
+	    auto spriteDot = spriteBuffer_[idx];
+
+	    if (spriteDot.color.a != 0 && spriteDot.isOpaque) {
+			frameBuffer_[idx] = spriteDot.color;
+
+			if (bgDot.isOpaque && spriteDot.isSprite0 &&
+				!spriteZeroReported_) {
+				status_ |= 0x40;
+				spriteZeroReported_ = true;
+			}
+	    }
+	}
 }
 
 void Ppu2C02::ParseControlMessage(uint8_t val) {
@@ -354,59 +376,73 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 	vramAddress_ += controlState_.addressIncrement;
 }
 
-void Ppu2C02::DrawScreen() {
+void Ppu2C02::DrawBackgroundLayers() {
+	if (!maskState_.showBackground && !maskState_.showBackgroundLeft) {
+		return;
+	}
+
 	Tile t;
-	if (maskState_.showBackground || maskState_.showBackgroundLeft) {
-		const uint16_t nameTableBase =
-			kNameTableStart[controlState_.nameTableId] -
-			kNameTableStart[0];
+	auto& bgBuffer = backgroundBuffers_[controlState_.nameTableId];
+	memset(bgBuffer.data(), 0, bgBuffer.size() * sizeof(BufferDot));
+	const uint16_t nameTableBase =
+		kNameTableStart[controlState_.nameTableId] -
+		kNameTableStart[0];
 
-		const uint16_t attrTableBase = nameTableBase + 0x3C0;
+	const uint16_t attrTableBase = nameTableBase + 0x3C0;
 
-		for (int row = 0; row < 30; ++row) {
-			for (int col = 0; col < 32; ++col) {
-				FetchPattern(nameTableBase, row, col);
-				t.FromData(rawTileBuffer_);
+	for (int row = 0; row < 30; ++row) {
+		for (int col = 0; col < 32; ++col) {
+			FetchPattern(nameTableBase, row, col);
+			t.FromData(rawTileBuffer_);
 
-				auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
-				for (int i = 0; i < 8*8; ++i) {
-					auto colorIdx = framePalette_[paletteIdx][t.data[i]];
-					auto c = kColorPalette[colorIdx];
-					frameBuffer_[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = c;
-				}
+			auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
+			for (int i = 0; i < 8*8; ++i) {
+				auto colorIdx = framePalette_[paletteIdx][t.data[i]];
+				bgBuffer[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = {
+					kColorPalette[colorIdx], t.data[i] != 0, false};
 			}
 		}
 	}
+}
 
-	if (maskState_.showSprites || maskState_.showSpritesLeft) {
-		auto* entries = reinterpret_cast<OAMEntry*>(oamStorage_.data());
-		for (int i = 0; i < 64; ++i) {
-			auto& entry = entries[i];
-			if (entry.y >= 0xEF || entry.x >= 240) {
+void Ppu2C02::DrawSpriteLayer() {
+	if (!maskState_.showSprites && !maskState_.showSpritesLeft) {
+		return;
+	}
+
+	Tile t;
+	memset(spriteBuffer_.data(), 0, spriteBuffer_.size() * sizeof(BufferDot));
+	auto* entries = reinterpret_cast<OAMEntry*>(oamStorage_.data());
+	for (int i = 0; i < 64; ++i) {
+		auto& entry = entries[i];
+		if (entry.y >= 0xEF || entry.x >= 240) {
+			continue;
+		}
+
+		auto patternStartAddr = controlState_.spriteTableAddr + entry.id * 16;
+		for (int i = 0; i < 16; ++i) {
+			rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);
+		}
+		t.FromData(rawTileBuffer_);
+		auto& palette = framePalette_[4 + (entry.attr & 0x03)];
+		for (int i = 0; i < 8*8; ++i) {
+			auto colorIdx = palette[t.data[i]];
+			auto c = kColorPalette[colorIdx];
+			int x = i % 8;
+			int y = i / 8;
+			if (entry.attr & 0x40) { // horizontal flip
+				x = 7 - x;
+			}
+			if (entry.attr & 0x80) { // vertical flip
+				y = 7 - y;
+			}
+			bool isOpaque = t.data[i] != 0;
+			auto idx = (entry.y + 1 + y) * 256 + entry.x + x;
+			if (!isOpaque && spriteBuffer_[idx].color.a != 0) {
 				continue;
 			}
 
-			auto patternStartAddr = controlState_.spriteTableAddr + entry.id * 16;
-			for (int i = 0; i < 16; ++i) {
-				rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);
-			}
-			t.FromData(rawTileBuffer_);
-			for (int i = 0; i < 8*8; ++i) {
-				if (t.data[i] == 0) { // transparent pixel
-					continue;
-				}
-				auto colorIdx = framePalette_[4 + (entry.attr & 0x03)][t.data[i]];
-				auto c = kColorPalette[colorIdx];
-				int x = i % 8;
-				int y = i / 8;
-				if (entry.attr & 0x40) { // horizontal flip
-					x = 7 - x;
-				}
-				if (entry.attr & 0x80) { // vertical flip
-					y = 7 - y;
-				}
-				frameBuffer_[(entry.y + 1 + y) * 256 + entry.x + x] = c;
-			}
+			spriteBuffer_[idx] = {c, isOpaque, i == 0};
 		}
 	}
 

@@ -28,6 +28,16 @@ private:
 	Bus* bus_ = nullptr;
 	RGBA* frameBuffer_ = nullptr;
 
+	struct BufferDot {
+		RGBA color;
+		bool isOpaque = true;
+		bool isSprite0 = false;
+	};
+	using BackingBuffer = std::array<BufferDot, kScreenColCount * kScreenRowCount>;
+	std::array<BackingBuffer, 4> backgroundBuffers_;
+	BackingBuffer spriteBuffer_;
+	bool spriteZeroReported_ = false;
+
 	uint8_t oamAddress_ = 0;
 	std::array<uint8_t, 0xFF> oamStorage_;
 
@@ -79,7 +89,8 @@ private:
 
 	void FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col);
 	uint8_t GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col);
-	void DrawScreen();
+	void DrawBackgroundLayers();
+	void DrawSpriteLayer();
 };
 
 } // namespace nes
