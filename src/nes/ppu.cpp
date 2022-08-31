@@ -420,8 +420,8 @@ void Ppu2C02::DrawSpriteLayer() {
 		}
 
 		auto patternStartAddr = controlState_.spriteTableAddr + entry.id * 16;
-		for (int i = 0; i < 16; ++i) {
-			rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);
+		for (int spriteIndex = 0; spriteIndex < 16; ++spriteIndex) {
+			rawTileBuffer_[spriteIndex] = bus_->ReadChr(patternStartAddr + spriteIndex);
 		}
 		t.FromData(rawTileBuffer_);
 		auto& palette = framePalette_[4 + (entry.attr & 0x03)];
