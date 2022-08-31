@@ -437,7 +437,12 @@ void Ppu2C02::DrawSpriteLayer() {
 				y = 7 - y;
 			}
 			bool isOpaque = t.data[i] != 0;
-			auto idx = (entry.y + 1 + y) * 256 + entry.x + x;
+			auto idxY = entry.y + 1 + y;
+			auto idxX = entry.x + x;
+			if (idxY >= kScreenRowCount || idxX >= kScreenColCount) {
+				continue;
+			}
+			auto idx = idxY * kScreenColCount + idxX;
 			if (!isOpaque && spriteBuffer_[idx].color.a != 0) {
 				continue;
 			}
