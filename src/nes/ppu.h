@@ -22,6 +22,7 @@ public:
 	void SetFramebuffer(RGBA* buf);
 
 	const std::array<Palette, 8>& GetFramePalette() const;
+	const std::array<RGBA, 8*8>& GetSpriteZero() const;
 
 	void Tick();
 private:
@@ -81,6 +82,8 @@ private:
 		bool emphasizeGreen : 1 = false;
 		bool emphasizeBlue : 1 = false;
 	} maskState_;
+
+	std::array<RGBA, 8 * 8> spriteZeroData_;
 
 	void ParseControlMessage(uint8_t val);
 	void ParseMaskMessage(uint8_t val);

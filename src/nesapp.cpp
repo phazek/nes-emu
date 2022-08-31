@@ -95,6 +95,10 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 		y += 3;
 	}
 
+	olc::Sprite spriteZero{8, 8};
+	memcpy((void*)spriteZero.GetData(), (void*)ppu_.GetSpriteZero().data(), 8 * 8 * sizeof(RGBA));
+	DrawSprite(0, y * 10, &spriteZero, 4);
+
 	DrawSprite(121, 0, &frameBufferSprite_, 2);
 
 	return true;

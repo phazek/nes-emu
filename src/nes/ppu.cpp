@@ -1,6 +1,7 @@
 #include "ppu.h"
 
 #include "bus.h"
+#include "types.h"
 #include "utils.h"
 
 #include <tfm/tinyformat.h>
@@ -183,6 +184,10 @@ void Ppu2C02::SetFramebuffer(RGBA* buf) {
 
 const std::array<Ppu2C02::Palette, 8>& Ppu2C02::GetFramePalette() const {
 	return framePalette_;
+}
+
+const std::array<RGBA, 8 * 8>& Ppu2C02::GetSpriteZero() const {
+	return spriteZeroData_;
 }
 
 void Ppu2C02::Tick() {
@@ -412,6 +417,7 @@ void Ppu2C02::DrawSpriteLayer() {
 
 	Tile t;
 	memset(spriteBuffer_.data(), 0, spriteBuffer_.size() * sizeof(BufferDot));
+	memset(spriteZeroData_.data(), 0, spriteZeroData_.size() * sizeof(RGBA));
 	auto* entries = reinterpret_cast<OAMEntry*>(oamStorage_.data());
 	for (int i = 0; i < 64; ++i) {
 		auto& entry = entries[i];
@@ -425,18 +431,25 @@ void Ppu2C02::DrawSpriteLayer() {
 		}
 		t.FromData(rawTileBuffer_);
 		auto& palette = framePalette_[4 + (entry.attr & 0x03)];
-		for (int i = 0; i < 8*8; ++i) {
-			auto colorIdx = palette[t.data[i]];
+
+		for (int pxInd = 0; pxInd < 8*8; ++pxInd) {
+			auto px = t.data[pxInd];
+			auto colorIdx = palette[px];
 			auto c = kColorPalette[colorIdx];
-			int x = i % 8;
-			int y = i / 8;
+			int x = pxInd % 8;
+			int y = pxInd / 8;
 			if (entry.attr & 0x40) { // horizontal flip
 				x = 7 - x;
 			}
 			if (entry.attr & 0x80) { // vertical flip
 				y = 7 - y;
 			}
-			bool isOpaque = t.data[i] != 0;
+
+			if (i == 0) {
+				spriteZeroData_[y * 8 + x] = c;
+			}
+
+			bool isOpaque = px != 0;
 			auto idxY = entry.y + 1 + y;
 			auto idxX = entry.x + x;
 			if (idxY >= kScreenRowCount || idxX >= kScreenColCount) {
