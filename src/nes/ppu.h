@@ -26,6 +26,7 @@ public:
 
 	void Tick();
 private:
+	long long int tickCount_ = 0;
 	Bus* bus_ = nullptr;
 	RGBA* frameBuffer_ = nullptr;
 
@@ -50,7 +51,8 @@ private:
 
 	std::array<uint8_t, 16> rawTileBuffer_;
 
-	uint16_t scrollBuffer_ = 0;
+	uint8_t scrollSetIndex_ = 0;
+	std::array<uint8_t, 2> scrollBuffer_ = {0, 0}; // X, Y
 	uint8_t status_ = 0;
 
 	uint32_t dotIdx_ = 0;
@@ -59,7 +61,7 @@ private:
 	struct ControlState {
 		uint16_t nameTableId = 0;
 		uint16_t spriteTableAddr;
-		uint16_t backgroundTableAddr;
+		uint16_t backgroundTableIdx = 0;
 		uint16_t addressIncrement = 0;
 		enum SpriteSize {
 			k8x8,
@@ -90,7 +92,7 @@ private:
 	uint8_t HandleDataRead(bool silent);
 	void HandleDataWrite(uint8_t val);
 
-	void FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col);
+	void FetchPattern(uint8_t nameTableIdx, uint8_t row, uint8_t col);
 	uint8_t GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col);
 	void DrawBackgroundLayers();
 	void DrawSpriteLayer();

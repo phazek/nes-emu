@@ -96,7 +96,7 @@ uint8_t Ppu2C02::Read(uint16_t addr, bool silent) {
 			    status_ &= 0x7F;
 
 			    vramBuffer_ = 0;
-			    scrollBuffer_ = 0;
+			    scrollBuffer_ = {0, 0};
 			}
 
 			return tmp;
@@ -151,8 +151,15 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kPPUSCROLL: {
-			scrollBuffer_ <<= 8;
-			scrollBuffer_ |= val;
+			static int oldX = 0;
+			if (scrollSetIndex_ == 0) {
+				if (oldX != val) {
+					tfm::printf("[%d] Scroll %d -> %d\n", tickCount_, oldX, val);
+				}
+				oldX = val;
+			}
+			scrollBuffer_[scrollSetIndex_] = val;
+			scrollSetIndex_ ^= 1;
 			break;
 		}
 		case kPPUADDR: {
@@ -191,9 +198,11 @@ const std::array<RGBA, 8 * 8>& Ppu2C02::GetSpriteZero() const {
 }
 
 void Ppu2C02::Tick() {
+	tickCount_++;
 	uint32_t newDot = (dotIdx_ + 1) % (kScanlineRowCount * kScanlineColCount);
 
 	if (newDot == 0) {
+		tfm::printf("[%d]NewScreen\n", tickCount_);
 		DrawBackgroundLayers();
 		DrawSpriteLayer();
 		spriteZeroReported_ = false;
@@ -221,14 +230,23 @@ void Ppu2C02::Tick() {
 
 	auto col = dotIdx_ % kScanlineColCount;
 	auto row = dotIdx_ / kScanlineColCount;
+	BufferDot bgDot;
 	if (col < kScreenColCount && row < kScreenRowCount) {
-		auto idx = row * kScreenColCount + col;
-	    auto bgDot = backgroundBuffers_[controlState_.nameTableId][idx];
-	    frameBuffer_[idx] = bgDot.color;
-	    auto spriteDot = spriteBuffer_[idx];
+		int dstIdx = row * kScreenColCount + col;
+		int sCol = col + scrollBuffer_[0];
+		int sRow = row + scrollBuffer_[1];
+		if (sCol >= kScreenColCount) {
+			int srcIdx = sRow * kScreenColCount + (sCol % kScreenColCount);
+			bgDot = backgroundBuffers_[1 - controlState_.nameTableId][srcIdx];
+		} else {
+			int srcIdx = sRow * kScreenColCount + sCol;
+			bgDot = backgroundBuffers_[controlState_.nameTableId][srcIdx];
+		}
+		frameBuffer_[dstIdx] = bgDot.color;
 
+	    auto spriteDot = spriteBuffer_[dstIdx];
 	    if (spriteDot.color.a != 0 && spriteDot.isOpaque) {
-			frameBuffer_[idx] = spriteDot.color;
+			frameBuffer_[dstIdx] = spriteDot.color;
 
 			if (bgDot.isOpaque && spriteDot.isSprite0 &&
 				!spriteZeroReported_) {
@@ -240,10 +258,14 @@ void Ppu2C02::Tick() {
 }
 
 void Ppu2C02::ParseControlMessage(uint8_t val) {
+	auto old = controlState_.nameTableId;
 	controlState_.nameTableId = val & 0x03;
+	if (old != controlState_.nameTableId) {
+		tfm::printf("[%d] Nametable changed %d -> %d\n", tickCount_, old, controlState_.nameTableId);
+	}
 	controlState_.addressIncrement = (val & 0x04) ? 32 : 1;
 	controlState_.spriteTableAddr = (val & 0x08) ? 0x1000 : 0x0000;
-	controlState_.backgroundTableAddr = (val & 0x10) ? 0x1000 : 0x0000;
+	controlState_.backgroundTableIdx = (val & 0x10) ? 1 : 0;
 	controlState_.spriteSize =
 	    (val & 0x20) ? ControlState::SpriteSize::k8x16 : ControlState::SpriteSize::k8x8;
 	controlState_.select =
@@ -293,7 +315,7 @@ uint8_t Ppu2C02::HandleDataRead(bool silent) {
 
 	// Nametable 1
 	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
-		result = vramStorage_[addr - kNameTableStart[1]];
+		result = vramStorage_[addr - kNameTableStart[0]];
 	}
 
 	// Nametable 2
@@ -353,7 +375,7 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 
 	// Nametable 1
 	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
-		vramStorage_[addr - kNameTableStart[1]] = val;
+		vramStorage_[addr - kNameTableStart[0]] = val;
 	}
 
 	// Nametable 2
@@ -387,24 +409,23 @@ void Ppu2C02::DrawBackgroundLayers() {
 	}
 
 	Tile t;
-	auto& bgBuffer = backgroundBuffers_[controlState_.nameTableId];
-	memset(bgBuffer.data(), 0, bgBuffer.size() * sizeof(BufferDot));
-	const uint16_t nameTableBase =
-		kNameTableStart[controlState_.nameTableId] -
-		kNameTableStart[0];
+	for (int bufIdx = 0; bufIdx < 2; ++bufIdx) {
+		auto& bgBuffer = backgroundBuffers_[bufIdx];
+		memset(bgBuffer.data(), 0, bgBuffer.size() * sizeof(BufferDot));
+		const uint16_t attrTableBase =
+		    kNameTableStart[bufIdx] - kNameTableStart[0] + 0x3C0;
 
-	const uint16_t attrTableBase = nameTableBase + 0x3C0;
+		for (int row = 0; row < 30; ++row) {
+			for (int col = 0; col < 32; ++col) {
+				FetchPattern(bufIdx, row, col);
+				t.FromData(rawTileBuffer_);
 
-	for (int row = 0; row < 30; ++row) {
-		for (int col = 0; col < 32; ++col) {
-			FetchPattern(nameTableBase, row, col);
-			t.FromData(rawTileBuffer_);
-
-			auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
-			for (int i = 0; i < 8*8; ++i) {
-				auto colorIdx = framePalette_[paletteIdx][t.data[i]];
-				bgBuffer[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = {
-					kColorPalette[colorIdx], t.data[i] != 0, false};
+				auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
+				for (int i = 0; i < 8*8; ++i) {
+					auto colorIdx = framePalette_[paletteIdx][t.data[i]];
+					bgBuffer[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = {
+						kColorPalette[colorIdx], t.data[i] != 0, false};
+				}
 			}
 		}
 	}
@@ -466,10 +487,10 @@ void Ppu2C02::DrawSpriteLayer() {
 
 }
 
-void Ppu2C02::FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col) {
-	auto idx = nameTableBase + row * 32 + col;
+void Ppu2C02::FetchPattern(uint8_t nameTableIdx, uint8_t row, uint8_t col) {
+	auto idx = (kNameTableStart[nameTableIdx] - kNameTableStart[0]) + row * 32 + col;
 	auto patternIdx = vramStorage_[idx];
-	auto patternStartAddr = controlState_.backgroundTableAddr + patternIdx * 16;
+	auto patternStartAddr = controlState_.backgroundTableIdx*0x1000 + patternIdx * 16;
 
 	for (int i = 0; i < 16; ++i) {
 		rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);

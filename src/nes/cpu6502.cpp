@@ -740,7 +740,7 @@ void Cpu6502::Tick() {
 			break;
 		}
 		case Instruction::kPLP: {
-		    status_ = PopStack() & ~Flag::B | Flag::X;
+		    status_ = (PopStack() & ~Flag::B) | Flag::X;
 		    assert(op.addrMode == AddressMode::kIMP);
 		    cycleLeft_ += 4;
 		    break;
@@ -820,7 +820,7 @@ void Cpu6502::Tick() {
 			break;
 		}
 		case Instruction::kRTI: {
-		    status_ = PopStack() & ~Flag::B | Flag::X;
+		    status_ = (PopStack() & ~Flag::B) | Flag::X;
 			uint16_t addr = PopStack(); // LL
 			addr |= PopStack() << 8; // HH
 			pc_ = addr;
