@@ -26,15 +26,16 @@ public:
 
 	void Tick();
 private:
-	Bus* bus_ = nullptr;
-	RGBA* frameBuffer_ = nullptr;
-
 	struct BufferDot {
 		RGBA color;
 		bool isOpaque = true;
 		bool isSprite0 = false;
 	};
 	using BackingBuffer = std::array<BufferDot, kScreenColCount * kScreenRowCount>;
+
+	Bus* bus_ = nullptr;
+	RGBA* frameBuffer_ = nullptr;
+
 	std::array<BackingBuffer, 4> backgroundBuffers_;
 	BackingBuffer spriteBuffer_;
 	bool spriteZeroReported_ = false;

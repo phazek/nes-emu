@@ -36,6 +36,7 @@ constexpr uint16_t kPPUDATA = 0x2007;   // READ/WRITE
 constexpr std::array<uint16_t, 2> kPatternTableStart = {0x0000, 0x1000};
 constexpr std::array<uint16_t, 4> kNameTableStart = {0x2000, 0x2400, 0x2800, 0x2C00};
 constexpr uint16_t kPaletteTableStart = 0x3F00;
+constexpr uint16_t kNameTableSize = 0x03FF;
 
 struct OAMEntry {
 	uint8_t y;
@@ -287,23 +288,23 @@ uint8_t Ppu2C02::HandleDataRead(bool silent) {
 	}
 
 	// Nametable 0
-	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + kNameTableSize, addr)) {
 		result = vramStorage_[addr - kNameTableStart[0]];
 	}
 
 	// Nametable 1
-	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
-		result = vramStorage_[addr - kNameTableStart[1]];
+	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + kNameTableSize, addr)) {
+		result = vramStorage_[addr - kNameTableStart[0]];
 	}
 
 	// Nametable 2
-	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + kNameTableSize, addr)) {
 		// TODO
 		result = 0;
 	}
 
 	// Nametable 3
-	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + kNameTableSize, addr)) {
 		// TODO
 		result = 0;
 	}
@@ -347,22 +348,22 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 	}
 
 	// Nametable 0
-	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + kNameTableSize, addr)) {
 		vramStorage_[addr - kNameTableStart[0]] = val;
 	}
 
 	// Nametable 1
-	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
-		vramStorage_[addr - kNameTableStart[1]] = val;
+	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + kNameTableSize, addr)) {
+		vramStorage_[addr - kNameTableStart[0]] = val;
 	}
 
 	// Nametable 2
-	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + kNameTableSize, addr)) {
 		// TODO
 	}
 
 	// Nametable 3
-	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + kNameTableSize, addr)) {
 		// TODO
 	}
 
