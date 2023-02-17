@@ -97,7 +97,7 @@ uint8_t Ppu2C02::Read(uint16_t addr, bool silent) {
 			    status_ &= 0x7F;
 
 			    vramBuffer_ = 0;
-			    scrollBuffer_ = 0;
+			    scrollBuffer_ = {0, 0};
 			}
 
 			return tmp;
@@ -152,8 +152,8 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kPPUSCROLL: {
-			scrollBuffer_ <<= 8;
-			scrollBuffer_ |= val;
+			scrollBuffer_[scrollSetIndex_] = val;
+			scrollSetIndex_ ^= 1;
 			break;
 		}
 		case kPPUADDR: {

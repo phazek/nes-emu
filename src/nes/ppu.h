@@ -51,7 +51,8 @@ private:
 
 	std::array<uint8_t, 16> rawTileBuffer_;
 
-	uint16_t scrollBuffer_ = 0;
+	uint8_t scrollSetIndex_ = 0;
+	std::array<uint8_t, 2> scrollBuffer_{0, 0}; // X, Y
 	uint8_t status_ = 0;
 
 	uint32_t dotIdx_ = 0;
