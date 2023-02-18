@@ -330,19 +330,33 @@ uint8_t Ppu2C02::HandleDataRead(bool silent) {
 		result = 0;
 	}
 
-	// Mirror 0x3F00-0x3F1F
-	if (IsInRange(0x3F20, 0x3FFF, addr)) {
-		addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
-	}
 	// Palette indexes
-	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x0020, addr)) {
+	if (IsInRange(kPaletteTableStart + 0x0020, 0x3FFF, addr)) {
+		addr = kPaletteTableStart + ((addr - kPaletteTableStart) % 0x0020);
+	}
+
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
+		switch (addr) {
+			case 0x3F10:
+				addr = 0x3F00;
+				break;
+			case 0x3F14:
+				addr = 0x3F04;
+				break;
+			case 0x3F18:
+				addr = 0x3F08;
+				break;
+			case 0x3F1C:
+				addr = 0x3F0C;
+				break;
+		}
 		auto idx = addr - kPaletteTableStart;
 		auto palIdx = idx / 4;
 		auto colorIdx = idx % 4;
 		result = framePalette_[palIdx][colorIdx];
 	}
 
-	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x00FF, addr)) {
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
 		vramBuffer_ = result ;
 	}
 
@@ -388,12 +402,26 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 		// TODO
 	}
 
-	// Mirror 0x3F00-0x3F1F
-	if (IsInRange(0x3F20, 0x3FFF, addr)) {
-		addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
-	}
 	// Palette indexes
-	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x0020, addr)) {
+	if (IsInRange(kPaletteTableStart + 0x0020, 0x3FFF, addr)) {
+		addr = kPaletteTableStart + ((addr - kPaletteTableStart) % 0x0020);
+	}
+
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
+		switch (addr) {
+			case 0x3F10:
+				addr = 0x3F00;
+				break;
+			case 0x3F14:
+				addr = 0x3F04;
+				break;
+			case 0x3F18:
+				addr = 0x3F08;
+				break;
+			case 0x3F1C:
+				addr = 0x3F0C;
+				break;
+		}
 		auto idx = addr - kPaletteTableStart;
 		auto palIdx = idx / 4;
 		auto colorIdx = idx % 4;
