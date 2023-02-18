@@ -474,7 +474,7 @@ void Ppu2C02::DrawSpriteLayer() {
 	memset(spriteBuffer_.data(), 0, spriteBuffer_.size() * sizeof(BufferDot));
 	memset(spriteZeroData_.data(), 0, spriteZeroData_.size() * sizeof(RGBA));
 	auto* entries = reinterpret_cast<OAMEntry*>(oamStorage_.data());
-	for (int i = 0; i < 64; ++i) {
+	for (int i = 63; i >= 0; --i) {
 		auto& entry = entries[i];
 		if (entry.y >= 0xEF || entry.x >= 240) {
 			continue;
