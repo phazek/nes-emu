@@ -522,12 +522,21 @@ void Ppu2C02::DrawSpriteLayer() {
 
 uint8_t Ppu2C02::GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col) {
 	auto attr = vramStorage_[attrTableBase + (row / 4) * 8 + (col / 4)];
-	auto tmp = ((row & 1) << 1) | (col & 1);
-	switch (tmp) {
-		case 0: return attr  & 0x03;
-		case 1: return (attr & 0x0C) >> 2;
-		case 2: return (attr & 0x30) >> 4;
-		case 3: return (attr & 0xC0) >> 6;
+	auto id = ((row & 1) << 1) | (col & 1);
+	//
+	//   -----------
+	//  | r0  | r0  |
+	//  | c0  | c1  |
+	//  |-----------|
+	//  | r1  | r1  |
+	//  | c0  | c1  |
+	//   -----------
+	//
+	switch (id) {
+		case 0b00: return attr  & 0x03;
+		case 0b01: return (attr & 0x0C) >> 2;
+		case 0b10: return (attr & 0x30) >> 4;
+		case 0b11: return (attr & 0xC0) >> 6;
 		default: {
 			assert(false);
 			return 0;
