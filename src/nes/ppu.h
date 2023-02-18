@@ -61,7 +61,7 @@ private:
 	struct ControlState {
 		uint16_t nameTableId = 0;
 		uint16_t spriteTableAddr;
-		uint16_t backgroundTableAddr;
+		uint16_t backgroundTableIdx = 0;
 		uint16_t addressIncrement = 0;
 		enum SpriteSize {
 			k8x8,
@@ -92,7 +92,7 @@ private:
 	uint8_t HandleDataRead(bool silent);
 	void HandleDataWrite(uint8_t val);
 
-	void FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col);
+	void FetchPattern(uint8_t nameTableIdx, uint8_t row, uint8_t col);
 	uint8_t GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col);
 	void DrawBackgroundLayers();
 	void DrawSpriteLayer();
