@@ -13,7 +13,7 @@ namespace {
 struct Tile {
 	std::array<uint8_t, 8 * 8> data;
 
-	void FromData(const std::array<uint8_t, 16>& src) {
+	void FromData(const std::span<uint8_t>& src) {
 		for (int row = 0; row < 8; ++row) {
 			for (int col = 0; col < 8; ++col) {
 				bool ll = !!(src[row] & (1 << (7 - col)));
@@ -178,9 +178,9 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 		}
 		case kOAMDMA: {
 			uint16_t baseAddr = val << 8;
-			for (int i = 0; i < 256; ++i) {
-				oamStorage_[oamAddress_++] = bus_->Read(baseAddr + i);
-			}
+			auto data = bus_->ReadN(baseAddr, 256);
+			memcpy(oamStorage_.data(), data.data(), 256);
+			oamAddress_+=256;
 			bus_->TriggerDMA();
 			break;
 		}
@@ -417,8 +417,11 @@ void Ppu2C02::DrawBackgroundLayers() {
 
 		for (int row = 0; row < 30; ++row) {
 			for (int col = 0; col < 32; ++col) {
-				FetchPattern(bufIdx, row, col);
-				t.FromData(rawTileBuffer_);
+				auto idx = (kNameTableStart[bufIdx] - kNameTableStart[0]) + row * 32 + col;
+				auto patternIdx = vramStorage_[idx];
+				auto patternStartAddr = controlState_.backgroundTableIdx*0x1000 + patternIdx * 16;
+
+				t.FromData(bus_->ReadChrN(patternStartAddr, 16));
 
 				auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
 				for (int i = 0; i < 8*8; ++i) {
@@ -447,10 +450,7 @@ void Ppu2C02::DrawSpriteLayer() {
 		}
 
 		auto patternStartAddr = controlState_.spriteTableAddr + entry.id * 16;
-		for (int spriteIndex = 0; spriteIndex < 16; ++spriteIndex) {
-			rawTileBuffer_[spriteIndex] = bus_->ReadChr(patternStartAddr + spriteIndex);
-		}
-		t.FromData(rawTileBuffer_);
+		t.FromData(bus_->ReadChrN(patternStartAddr, 16));
 		auto& palette = framePalette_[4 + (entry.attr & 0x03)];
 
 		for (int pxInd = 0; pxInd < 8*8; ++pxInd) {
@@ -485,16 +485,6 @@ void Ppu2C02::DrawSpriteLayer() {
 		}
 	}
 
-}
-
-void Ppu2C02::FetchPattern(uint8_t nameTableIdx, uint8_t row, uint8_t col) {
-	auto idx = (kNameTableStart[nameTableIdx] - kNameTableStart[0]) + row * 32 + col;
-	auto patternIdx = vramStorage_[idx];
-	auto patternStartAddr = controlState_.backgroundTableIdx*0x1000 + patternIdx * 16;
-
-	for (int i = 0; i < 16; ++i) {
-		rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);
-	}
 }
 
 uint8_t Ppu2C02::GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col) {

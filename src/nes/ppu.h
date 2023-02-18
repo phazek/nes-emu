@@ -94,7 +94,6 @@ private:
 	uint8_t HandleDataRead(bool silent);
 	void HandleDataWrite(uint8_t val);
 
-	void FetchPattern(uint8_t nameTableIdx, uint8_t row, uint8_t col);
 	uint8_t GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col);
 	void DrawBackgroundLayers();
 	void DrawSpriteLayer();
