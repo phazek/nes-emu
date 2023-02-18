@@ -456,9 +456,11 @@ void Ppu2C02::DrawBackgroundLayers() {
 
 				auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
 				for (int i = 0; i < 8*8; ++i) {
-					auto colorIdx = framePalette_[paletteIdx][t.data[i]];
+					auto pxColorIdx = t.data[i];
+					// Pal0 contains global bg color
+					auto colorIdx = framePalette_[pxColorIdx ? paletteIdx : 0][pxColorIdx];
 					bgBuffer[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = {
-						kColorPalette[colorIdx], t.data[i] != 0, false};
+						kColorPalette[colorIdx], pxColorIdx != 0, false};
 				}
 			}
 		}
