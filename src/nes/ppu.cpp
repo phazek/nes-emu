@@ -412,14 +412,17 @@ void Ppu2C02::DrawBackgroundLayers() {
 	for (int bufIdx = 0; bufIdx < 2; ++bufIdx) {
 		auto& bgBuffer = backgroundBuffers_[bufIdx];
 		memset(bgBuffer.data(), 0, bgBuffer.size() * sizeof(BufferDot));
-		const uint16_t attrTableBase =
-		    kNameTableStart[bufIdx] - kNameTableStart[0] + 0x3C0;
+
+		const uint16_t nameTableBase = kNameTableStart[bufIdx] - kNameTableStart[0];
+		const uint16_t attrTableBase = nameTableBase + 0x3C0;
 
 		for (int row = 0; row < 30; ++row) {
 			for (int col = 0; col < 32; ++col) {
-				auto idx = (kNameTableStart[bufIdx] - kNameTableStart[0]) + row * 32 + col;
+				auto idx = nameTableBase + row * 32 + col;
 				auto patternIdx = vramStorage_[idx];
-				auto patternStartAddr = controlState_.backgroundTableIdx*0x1000 + patternIdx * 16;
+				auto patternStartAddr =
+				    controlState_.backgroundTableIdx * 0x1000 +
+				    patternIdx * 16;
 
 				t.FromData(bus_->ReadChrN(patternStartAddr, 16));
 
@@ -489,13 +492,14 @@ void Ppu2C02::DrawSpriteLayer() {
 
 uint8_t Ppu2C02::GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col) {
 	auto attr = vramStorage_[attrTableBase + (row / 4) * 8 + (col / 4)];
-	auto tmp = ((row % 2) << 1) & (col % 2);
+	auto tmp = ((row & 1) << 1) | (col & 1);
 	switch (tmp) {
-		case 0: return attr & 0x03;
+		case 0: return attr  & 0x03;
 		case 1: return (attr & 0x0C) >> 2;
 		case 2: return (attr & 0x30) >> 4;
 		case 3: return (attr & 0xC0) >> 6;
 		default: {
+			assert(false);
 			return 0;
 		}
 	}
