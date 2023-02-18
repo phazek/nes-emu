@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <span>
 
 #include "palette.h"
 
@@ -17,6 +18,7 @@ public:
 	Ppu2C02(Bus* bus);
 
 	uint8_t Read(uint16_t addr, bool silent);
+	std::span<uint8_t> ReadN(uint16_t addr, uint16_t count);
 	void Write(uint16_t addr, uint8_t val);
 
 	void SetFramebuffer(RGBA* buf);

@@ -7,7 +7,7 @@
 namespace nes {
 
 uint8_t Bus::Read(uint16_t addr, bool silent) {
-	if (IsInRange(0x0000, 0x17FF, addr)) { // internal memory
+	if (IsInRange(0x0000, 0x1FFF, addr)) { // internal memory
 		return memory_[addr % 0x0800];
 	}
 	if (IsInRange(0x2000, 0x3FFF, addr)) { // PPU registers
@@ -31,6 +31,25 @@ uint8_t Bus::Read(uint16_t addr, bool silent) {
 	}
 
 	return 0;
+}
+
+std::span<uint8_t> Bus::ReadN(uint16_t addr, uint16_t count) {
+	if (IsInRange(0x0000, 0x1FFF, addr)) {	// internal memory
+		return {memory_.data() + (addr % 0x0800), count};
+	}
+
+	if (IsInRange(0x2000, 0x3FFF, addr)) { // PPU registers
+		return ppu_->ReadN(0x2000 + ((addr - 0x2000) % 0x008), count);
+	}
+
+	if (IsInRange(0x4020, 0xFFFF, addr)) {	// Cartridge
+		if (cartridge_) {
+			return cartridge_->ReadPrgN(addr, count);
+		}
+	}
+
+	assert(false);
+	return {};
 }
 
 void Bus::Write(uint16_t addr, uint8_t val) {

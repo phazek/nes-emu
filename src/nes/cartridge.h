@@ -13,6 +13,7 @@ public:
 	bool LoadFile(const std::string& filePath);
 
 	uint8_t ReadPrg(uint16_t addr);
+	std::span<uint8_t> ReadPrgN(uint16_t addr, uint16_t count);
 	void WritePrg(uint16_t addr, uint8_t val);
 	uint8_t ReadChar(uint16_t addr);
 	void WriteChar(uint16_t addr, uint8_t val);

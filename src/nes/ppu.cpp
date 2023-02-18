@@ -128,6 +128,17 @@ uint8_t Ppu2C02::Read(uint16_t addr, bool silent) {
 	return 0;
 }
 
+std::span<uint8_t> Ppu2C02::ReadN(uint16_t addr, uint16_t count) {
+	switch (addr) {
+		case kOAMDATA: {
+			return {oamStorage_.data() + oamAddress_, count};
+		}
+	}
+
+	assert(false);
+	return {};
+}
+
 void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 	//tfm::printf("PPU write %s (0x%04X) -> 0x%02X\n", AddressToString(addr), addr, val);
 	switch (addr) {
