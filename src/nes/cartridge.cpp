@@ -63,6 +63,10 @@ uint8_t Cartridge::ReadChar(uint16_t addr) {
 	return mapper_->ReadChar(addr);
 }
 
+std::span<uint8_t> Cartridge::ReadChrN(uint16_t addr, uint16_t count){
+	return mapper_->ReadChrN(addr, count);
+}
+
 void Cartridge::WriteChar(uint16_t addr, uint8_t val) {
 	mapper_->WriteChar(addr, val);
 }

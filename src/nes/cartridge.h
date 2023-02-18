@@ -16,6 +16,7 @@ public:
 	std::span<uint8_t> ReadPrgN(uint16_t addr, uint16_t count);
 	void WritePrg(uint16_t addr, uint8_t val);
 	uint8_t ReadChar(uint16_t addr);
+	std::span<uint8_t> ReadChrN(uint16_t addr, uint16_t count);
 	void WriteChar(uint16_t addr, uint8_t val);
 private:
 

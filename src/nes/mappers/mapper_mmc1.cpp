@@ -91,6 +91,10 @@ uint8_t Mapper_MMC1::ReadChar(uint16_t addr) {
 	return buffer_[descriptor_.chrRomStart + addr];
 }
 
+std::span<uint8_t> Mapper_MMC1::ReadChrN(uint16_t addr, uint16_t count) {
+	return {buffer_ + descriptor_.chrRomStart + addr, count};
+}
+
 void Mapper_MMC1::WriteChar(uint16_t addr, uint8_t val) {
 	tfm::printf("ERROR: Invalid CHR write address at 0x%04X!", addr);
 	assert(false);

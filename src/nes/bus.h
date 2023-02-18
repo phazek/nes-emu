@@ -18,6 +18,7 @@ public:
 	void Write(uint16_t addr, uint8_t val);
 
 	uint8_t ReadChr(uint16_t addr);
+	std::span<uint8_t> ReadChrN(uint16_t addr, uint16_t count);
 
 	void InsertCartridge(Cartridge* cart);
 	void AttachPPU(Ppu2C02* ppu);

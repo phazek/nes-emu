@@ -19,6 +19,7 @@ public:
 	virtual std::span<uint8_t> ReadPrgN(uint16_t addr, uint16_t count) = 0;
 	virtual void WritePrg(uint16_t addr, uint8_t val) = 0;
 	virtual uint8_t ReadChar(uint16_t addr) = 0;
+	virtual std::span<uint8_t> ReadChrN(uint16_t addr, uint16_t count) = 0;
 	virtual void WriteChar(uint16_t addr, uint8_t val) = 0;
 
 protected:

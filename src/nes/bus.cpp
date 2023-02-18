@@ -85,6 +85,10 @@ uint8_t Bus::ReadChr(uint16_t addr) {
 	return cartridge_->ReadChar(addr);
 }
 
+std::span<uint8_t> Bus::ReadChrN(uint16_t addr, uint16_t count) {
+	return cartridge_->ReadChrN(addr, count);
+}
+
 void Bus::InsertCartridge(Cartridge* cart) {
 	cartridge_ = cart;
 }
