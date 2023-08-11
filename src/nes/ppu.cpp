@@ -130,6 +130,12 @@ uint8_t Ppu2C02::Read(uint16_t addr, bool silent) {
 
 std::span<uint8_t> Ppu2C02::ReadN(uint16_t addr, uint16_t count) {
 	switch (addr) {
+		case 0x0000: { // Nametable0
+			return {vramStorage_.data(), kNameTableSize};
+		}
+		case 0x1000: { // Nametable1
+			return {vramStorage_.data() + kNameTableSize, kNameTableSize};
+		}
 		case kOAMDATA: {
 			return {oamStorage_.data() + oamAddress_, count};
 		}
