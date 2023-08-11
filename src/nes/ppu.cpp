@@ -250,7 +250,9 @@ void Ppu2C02::Tick() {
 
 	    auto spriteDot = spriteBuffer_[dstIdx];
 	    if (spriteDot.color.a != 0 && spriteDot.isOpaque) {
-			frameBuffer_[dstIdx] = spriteDot.color;
+			if (!spriteDot.isBehind || !bgDot.isOpaque) {
+			    frameBuffer_[dstIdx] = spriteDot.color;
+			}
 
 			if (bgDot.isOpaque && spriteDot.isSprite0 &&
 				!spriteZeroReported_) {
@@ -514,7 +516,7 @@ void Ppu2C02::DrawSpriteLayer() {
 				continue;
 			}
 
-			spriteBuffer_[idx] = {c, isOpaque, i == 0};
+			spriteBuffer_[idx] = {c, isOpaque, (entry.attr & 0x20) != 0, i == 0};
 		}
 	}
 

@@ -31,6 +31,7 @@ private:
 	struct BufferDot {
 		RGBA color;
 		bool isOpaque = true;
+		bool isBehind = false;
 		bool isSprite0 = false;
 	};
 	using BackingBuffer = std::array<BufferDot, kScreenColCount * kScreenRowCount>;
