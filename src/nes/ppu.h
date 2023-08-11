@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <span>
 
 #include "palette.h"
 
@@ -17,6 +18,7 @@ public:
 	Ppu2C02(Bus* bus);
 
 	uint8_t Read(uint16_t addr, bool silent);
+	std::span<uint8_t> ReadN(uint16_t addr, uint16_t count);
 	void Write(uint16_t addr, uint8_t val);
 
 	void SetFramebuffer(RGBA* buf);
@@ -26,15 +28,17 @@ public:
 
 	void Tick();
 private:
-	Bus* bus_ = nullptr;
-	RGBA* frameBuffer_ = nullptr;
-
 	struct BufferDot {
 		RGBA color;
 		bool isOpaque = true;
+		bool isBehind = false;
 		bool isSprite0 = false;
 	};
 	using BackingBuffer = std::array<BufferDot, kScreenColCount * kScreenRowCount>;
+
+	Bus* bus_ = nullptr;
+	RGBA* frameBuffer_ = nullptr;
+
 	std::array<BackingBuffer, 4> backgroundBuffers_;
 	BackingBuffer spriteBuffer_;
 	bool spriteZeroReported_ = false;
@@ -50,7 +54,8 @@ private:
 
 	std::array<uint8_t, 16> rawTileBuffer_;
 
-	uint16_t scrollBuffer_ = 0;
+	uint8_t scrollSetIndex_ = 0;
+	std::array<uint8_t, 2> scrollBuffer_{0, 0}; // X, Y
 	uint8_t status_ = 0;
 
 	uint32_t dotIdx_ = 0;
@@ -59,7 +64,7 @@ private:
 	struct ControlState {
 		uint16_t nameTableId = 0;
 		uint16_t spriteTableAddr;
-		uint16_t backgroundTableAddr;
+		uint16_t backgroundTableIdx = 0;
 		uint16_t addressIncrement = 0;
 		enum SpriteSize {
 			k8x8,
@@ -90,7 +95,6 @@ private:
 	uint8_t HandleDataRead(bool silent);
 	void HandleDataWrite(uint8_t val);
 
-	void FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col);
 	uint8_t GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col);
 	void DrawBackgroundLayers();
 	void DrawSpriteLayer();

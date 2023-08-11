@@ -43,6 +43,24 @@ uint8_t Mapper_MMC1::ReadPrg(uint16_t addr) {
 	return 0;
 }
 
+std::span<uint8_t> Mapper_MMC1::ReadPrgN(uint16_t addr, uint16_t count) {
+	uint16_t endAddr = addr + count;
+	if (IsInRange(0x6000, 0x7FFF, addr) && ramEnabled_) { // PRG RAM
+		uint16_t effAddr = addr - 0x6000;
+		return {prgRAM_.data() + effAddr, count};
+	} else if (IsInRange(0x8000, 0xBFFF, addr)) {
+		uint16_t effAddr = prgBankAddressOffsets_[0] + (addr - 0x8000);
+		return {buffer_ + effAddr, count};
+	} else if (IsInRange(0xC000, 0xFFFF, addr)) {
+		uint16_t effAddr = prgBankAddressOffsets_[1] + (addr - 0xC000);
+		return {buffer_ + effAddr, count};
+	}
+
+	tfm::printf("ERROR: Invalid PRG-N read address at 0x%04X!", addr);
+	assert(false);
+	return {};
+}
+
 void Mapper_MMC1::WritePrg(uint16_t addr, uint8_t val) {
 	if (IsInRange(0x6000, 0x7FFF, addr) && ramEnabled_) { // PRG RAM
 		prgRAM_[addr - 0x6000] = val;
@@ -71,6 +89,10 @@ void Mapper_MMC1::WritePrg(uint16_t addr, uint8_t val) {
 
 uint8_t Mapper_MMC1::ReadChar(uint16_t addr) {
 	return buffer_[descriptor_.chrRomStart + addr];
+}
+
+std::span<uint8_t> Mapper_MMC1::ReadChrN(uint16_t addr, uint16_t count) {
+	return {buffer_ + descriptor_.chrRomStart + addr, count};
 }
 
 void Mapper_MMC1::WriteChar(uint16_t addr, uint8_t val) {

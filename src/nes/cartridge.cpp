@@ -51,12 +51,20 @@ uint8_t Cartridge::ReadPrg(uint16_t addr) {
 	return mapper_->ReadPrg(addr);
 }
 
+std::span<uint8_t> Cartridge::ReadPrgN(uint16_t addr, uint16_t count){
+	return mapper_->ReadPrgN(addr, count);
+}
+
 void Cartridge::WritePrg(uint16_t addr, uint8_t val) {
 	mapper_->WritePrg(addr, val);
 }
 
 uint8_t Cartridge::ReadChar(uint16_t addr) {
 	return mapper_->ReadChar(addr);
+}
+
+std::span<uint8_t> Cartridge::ReadChrN(uint16_t addr, uint16_t count){
+	return mapper_->ReadChrN(addr, count);
 }
 
 void Cartridge::WriteChar(uint16_t addr, uint8_t val) {

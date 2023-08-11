@@ -13,7 +13,7 @@ namespace {
 struct Tile {
 	std::array<uint8_t, 8 * 8> data;
 
-	void FromData(const std::array<uint8_t, 16>& src) {
+	void FromData(const std::span<uint8_t>& src) {
 		for (int row = 0; row < 8; ++row) {
 			for (int col = 0; col < 8; ++col) {
 				bool ll = !!(src[row] & (1 << (7 - col)));
@@ -36,6 +36,7 @@ constexpr uint16_t kPPUDATA = 0x2007;   // READ/WRITE
 constexpr std::array<uint16_t, 2> kPatternTableStart = {0x0000, 0x1000};
 constexpr std::array<uint16_t, 4> kNameTableStart = {0x2000, 0x2400, 0x2800, 0x2C00};
 constexpr uint16_t kPaletteTableStart = 0x3F00;
+constexpr uint16_t kNameTableSize = 0x03FF;
 
 struct OAMEntry {
 	uint8_t y;
@@ -96,7 +97,7 @@ uint8_t Ppu2C02::Read(uint16_t addr, bool silent) {
 			    status_ &= 0x7F;
 
 			    vramBuffer_ = 0;
-			    scrollBuffer_ = 0;
+			    scrollBuffer_ = {0, 0};
 			}
 
 			return tmp;
@@ -127,6 +128,23 @@ uint8_t Ppu2C02::Read(uint16_t addr, bool silent) {
 	return 0;
 }
 
+std::span<uint8_t> Ppu2C02::ReadN(uint16_t addr, uint16_t count) {
+	switch (addr) {
+		case 0x0000: { // Nametable0
+			return {vramStorage_.data(), kNameTableSize};
+		}
+		case 0x1000: { // Nametable1
+			return {vramStorage_.data() + kNameTableSize, kNameTableSize};
+		}
+		case kOAMDATA: {
+			return {oamStorage_.data() + oamAddress_, count};
+		}
+	}
+
+	assert(false);
+	return {};
+}
+
 void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 	//tfm::printf("PPU write %s (0x%04X) -> 0x%02X\n", AddressToString(addr), addr, val);
 	switch (addr) {
@@ -151,8 +169,8 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 			break;
 		}
 		case kPPUSCROLL: {
-			scrollBuffer_ <<= 8;
-			scrollBuffer_ |= val;
+			scrollBuffer_[scrollSetIndex_] = val;
+			scrollSetIndex_ ^= 1;
 			break;
 		}
 		case kPPUADDR: {
@@ -166,9 +184,9 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 		}
 		case kOAMDMA: {
 			uint16_t baseAddr = val << 8;
-			for (int i = 0; i < 256; ++i) {
-				oamStorage_[oamAddress_++] = bus_->Read(baseAddr + i);
-			}
+			auto data = bus_->ReadN(baseAddr, 256);
+			memcpy(oamStorage_.data(), data.data(), 256);
+			oamAddress_+=256;
 			bus_->TriggerDMA();
 			break;
 		}
@@ -194,6 +212,7 @@ void Ppu2C02::Tick() {
 	uint32_t newDot = (dotIdx_ + 1) % (kScanlineRowCount * kScanlineColCount);
 
 	if (newDot == 0) {
+		controlState_.nameTableId=0;
 		DrawBackgroundLayers();
 		DrawSpriteLayer();
 		spriteZeroReported_ = false;
@@ -221,14 +240,25 @@ void Ppu2C02::Tick() {
 
 	auto col = dotIdx_ % kScanlineColCount;
 	auto row = dotIdx_ / kScanlineColCount;
+	BufferDot bgDot;
 	if (col < kScreenColCount && row < kScreenRowCount) {
-		auto idx = row * kScreenColCount + col;
-	    auto bgDot = backgroundBuffers_[controlState_.nameTableId][idx];
-	    frameBuffer_[idx] = bgDot.color;
-	    auto spriteDot = spriteBuffer_[idx];
+		int dstIdx = row * kScreenColCount + col;
+		int sCol = col + scrollBuffer_[0];
+		int sRow = row + scrollBuffer_[1];
+		if (sCol >= kScreenColCount) {
+			int srcIdx = sRow * kScreenColCount + (sCol % kScreenColCount);
+			bgDot = backgroundBuffers_[1 - controlState_.nameTableId][srcIdx];
+		} else {
+			int srcIdx = sRow * kScreenColCount + sCol;
+			bgDot = backgroundBuffers_[controlState_.nameTableId][srcIdx];
+		}
+		frameBuffer_[dstIdx] = bgDot.color;
 
+	    auto spriteDot = spriteBuffer_[dstIdx];
 	    if (spriteDot.color.a != 0 && spriteDot.isOpaque) {
-			frameBuffer_[idx] = spriteDot.color;
+			if (!spriteDot.isBehind || !bgDot.isOpaque) {
+			    frameBuffer_[dstIdx] = spriteDot.color;
+			}
 
 			if (bgDot.isOpaque && spriteDot.isSprite0 &&
 				!spriteZeroReported_) {
@@ -243,7 +273,7 @@ void Ppu2C02::ParseControlMessage(uint8_t val) {
 	controlState_.nameTableId = val & 0x03;
 	controlState_.addressIncrement = (val & 0x04) ? 32 : 1;
 	controlState_.spriteTableAddr = (val & 0x08) ? 0x1000 : 0x0000;
-	controlState_.backgroundTableAddr = (val & 0x10) ? 0x1000 : 0x0000;
+	controlState_.backgroundTableIdx = (val & 0x10) ? 1 : 0;
 	controlState_.spriteSize =
 	    (val & 0x20) ? ControlState::SpriteSize::k8x16 : ControlState::SpriteSize::k8x8;
 	controlState_.select =
@@ -287,40 +317,54 @@ uint8_t Ppu2C02::HandleDataRead(bool silent) {
 	}
 
 	// Nametable 0
-	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + kNameTableSize, addr)) {
 		result = vramStorage_[addr - kNameTableStart[0]];
 	}
 
 	// Nametable 1
-	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
-		result = vramStorage_[addr - kNameTableStart[1]];
+	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + kNameTableSize, addr)) {
+		result = vramStorage_[addr - kNameTableStart[0]];
 	}
 
 	// Nametable 2
-	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + kNameTableSize, addr)) {
 		// TODO
 		result = 0;
 	}
 
 	// Nametable 3
-	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + kNameTableSize, addr)) {
 		// TODO
 		result = 0;
 	}
 
-	// Mirror 0x3F00-0x3F1F
-	if (IsInRange(0x3F20, 0x3FFF, addr)) {
-		addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
-	}
 	// Palette indexes
-	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x0020, addr)) {
+	if (IsInRange(kPaletteTableStart + 0x0020, 0x3FFF, addr)) {
+		addr = kPaletteTableStart + ((addr - kPaletteTableStart) % 0x0020);
+	}
+
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
+		switch (addr) {
+			case 0x3F10:
+				addr = 0x3F00;
+				break;
+			case 0x3F14:
+				addr = 0x3F04;
+				break;
+			case 0x3F18:
+				addr = 0x3F08;
+				break;
+			case 0x3F1C:
+				addr = 0x3F0C;
+				break;
+		}
 		auto idx = addr - kPaletteTableStart;
 		auto palIdx = idx / 4;
 		auto colorIdx = idx % 4;
 		result = framePalette_[palIdx][colorIdx];
 	}
 
-	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x00FF, addr)) {
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
 		vramBuffer_ = result ;
 	}
 
@@ -347,31 +391,45 @@ void Ppu2C02::HandleDataWrite(uint8_t val) {
 	}
 
 	// Nametable 0
-	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[0], kNameTableStart[0] + kNameTableSize, addr)) {
 		vramStorage_[addr - kNameTableStart[0]] = val;
 	}
 
 	// Nametable 1
-	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + 0x03FF, addr)) {
-		vramStorage_[addr - kNameTableStart[1]] = val;
+	if (IsInRange(kNameTableStart[1], kNameTableStart[1] + kNameTableSize, addr)) {
+		vramStorage_[addr - kNameTableStart[0]] = val;
 	}
 
 	// Nametable 2
-	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[2], kNameTableStart[2] + kNameTableSize, addr)) {
 		// TODO
 	}
 
 	// Nametable 3
-	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + 0x03FF, addr)) {
+	if (IsInRange(kNameTableStart[3], kNameTableStart[3] + kNameTableSize, addr)) {
 		// TODO
 	}
 
-	// Mirror 0x3F00-0x3F1F
-	if (IsInRange(0x3F20, 0x3FFF, addr)) {
-		addr = ((addr - 0x3F20) % 0x20) + kPaletteTableStart;
-	}
 	// Palette indexes
-	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x0020, addr)) {
+	if (IsInRange(kPaletteTableStart + 0x0020, 0x3FFF, addr)) {
+		addr = kPaletteTableStart + ((addr - kPaletteTableStart) % 0x0020);
+	}
+
+	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
+		switch (addr) {
+			case 0x3F10:
+				addr = 0x3F00;
+				break;
+			case 0x3F14:
+				addr = 0x3F04;
+				break;
+			case 0x3F18:
+				addr = 0x3F08;
+				break;
+			case 0x3F1C:
+				addr = 0x3F0C;
+				break;
+		}
 		auto idx = addr - kPaletteTableStart;
 		auto palIdx = idx / 4;
 		auto colorIdx = idx % 4;
@@ -387,24 +445,31 @@ void Ppu2C02::DrawBackgroundLayers() {
 	}
 
 	Tile t;
-	auto& bgBuffer = backgroundBuffers_[controlState_.nameTableId];
-	memset(bgBuffer.data(), 0, bgBuffer.size() * sizeof(BufferDot));
-	const uint16_t nameTableBase =
-		kNameTableStart[controlState_.nameTableId] -
-		kNameTableStart[0];
+	for (int bufIdx = 0; bufIdx < 2; ++bufIdx) {
+		auto& bgBuffer = backgroundBuffers_[bufIdx];
+		memset(bgBuffer.data(), 0, bgBuffer.size() * sizeof(BufferDot));
 
-	const uint16_t attrTableBase = nameTableBase + 0x3C0;
+		const uint16_t nameTableBase = kNameTableStart[bufIdx] - kNameTableStart[0];
+		const uint16_t attrTableBase = nameTableBase + 0x3C0;
 
-	for (int row = 0; row < 30; ++row) {
-		for (int col = 0; col < 32; ++col) {
-			FetchPattern(nameTableBase, row, col);
-			t.FromData(rawTileBuffer_);
+		for (int row = 0; row < 30; ++row) {
+			for (int col = 0; col < 32; ++col) {
+				auto idx = nameTableBase + row * 32 + col;
+				auto patternIdx = vramStorage_[idx];
+				auto patternStartAddr =
+				    controlState_.backgroundTableIdx * 0x1000 +
+				    patternIdx * 16;
 
-			auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
-			for (int i = 0; i < 8*8; ++i) {
-				auto colorIdx = framePalette_[paletteIdx][t.data[i]];
-				bgBuffer[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = {
-					kColorPalette[colorIdx], t.data[i] != 0, false};
+				t.FromData(bus_->ReadChrN(patternStartAddr, 16));
+
+				auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
+				for (int i = 0; i < 8*8; ++i) {
+					auto pxColorIdx = t.data[i];
+					// Pal0 contains global bg color
+					auto colorIdx = framePalette_[pxColorIdx ? paletteIdx : 0][pxColorIdx];
+					bgBuffer[(row * 8 + i / 8) * 256 + col * 8 + i % 8] = {
+						kColorPalette[colorIdx], pxColorIdx != 0, false};
+				}
 			}
 		}
 	}
@@ -419,17 +484,14 @@ void Ppu2C02::DrawSpriteLayer() {
 	memset(spriteBuffer_.data(), 0, spriteBuffer_.size() * sizeof(BufferDot));
 	memset(spriteZeroData_.data(), 0, spriteZeroData_.size() * sizeof(RGBA));
 	auto* entries = reinterpret_cast<OAMEntry*>(oamStorage_.data());
-	for (int i = 0; i < 64; ++i) {
+	for (int i = 63; i >= 0; --i) {
 		auto& entry = entries[i];
 		if (entry.y >= 0xEF || entry.x >= 240) {
 			continue;
 		}
 
 		auto patternStartAddr = controlState_.spriteTableAddr + entry.id * 16;
-		for (int spriteIndex = 0; spriteIndex < 16; ++spriteIndex) {
-			rawTileBuffer_[spriteIndex] = bus_->ReadChr(patternStartAddr + spriteIndex);
-		}
-		t.FromData(rawTileBuffer_);
+		t.FromData(bus_->ReadChrN(patternStartAddr, 16));
 		auto& palette = framePalette_[4 + (entry.attr & 0x03)];
 
 		for (int pxInd = 0; pxInd < 8*8; ++pxInd) {
@@ -460,31 +522,31 @@ void Ppu2C02::DrawSpriteLayer() {
 				continue;
 			}
 
-			spriteBuffer_[idx] = {c, isOpaque, i == 0};
+			spriteBuffer_[idx] = {c, isOpaque, (entry.attr & 0x20) != 0, i == 0};
 		}
 	}
 
 }
 
-void Ppu2C02::FetchPattern(uint16_t nameTableBase, uint8_t row, uint8_t col) {
-	auto idx = nameTableBase + row * 32 + col;
-	auto patternIdx = vramStorage_[idx];
-	auto patternStartAddr = controlState_.backgroundTableAddr + patternIdx * 16;
-
-	for (int i = 0; i < 16; ++i) {
-		rawTileBuffer_[i] = bus_->ReadChr(patternStartAddr + i);
-	}
-}
-
 uint8_t Ppu2C02::GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col) {
 	auto attr = vramStorage_[attrTableBase + (row / 4) * 8 + (col / 4)];
-	auto tmp = ((row % 2) << 1) & (col % 2);
-	switch (tmp) {
-		case 0: return attr & 0x03;
-		case 1: return (attr & 0x0C) >> 2;
-		case 2: return (attr & 0x30) >> 4;
-		case 3: return (attr & 0xC0) >> 6;
+	auto id = ((row & 1) << 1) | (col & 1);
+	//
+	//   -----------
+	//  | r0  | r0  |
+	//  | c0  | c1  |
+	//  |-----------|
+	//  | r1  | r1  |
+	//  | c0  | c1  |
+	//   -----------
+	//
+	switch (id) {
+		case 0b00: return attr  & 0x03;
+		case 0b01: return (attr & 0x0C) >> 2;
+		case 0b10: return (attr & 0x30) >> 4;
+		case 0b11: return (attr & 0xC0) >> 6;
 		default: {
+			assert(false);
 			return 0;
 		}
 	}

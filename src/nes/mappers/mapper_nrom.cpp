@@ -40,6 +40,25 @@ uint8_t Mapper_NROM::ReadPrg(uint16_t addr) {
 	return 0;
 }
 
+std::span<uint8_t> Mapper_NROM::ReadPrgN(uint16_t addr, uint16_t count) {
+	if (IsInRange(0x8000, 0xBFFF, addr)) {
+		auto effAddr = descriptor_.prgRomStart + addr - 0x8000;
+		return {buffer_ + effAddr, count};
+	}
+	if (IsInRange(0xC000, 0xFFFF, addr)) {
+		if (descriptor_.prgRomSize > 0x4000) {
+			auto effAddr = descriptor_.prgRomStart + (addr - 0x8000);
+			return {buffer_ + effAddr, count};
+		} else {
+			auto effAddr = descriptor_.prgRomStart + (addr - 0xC000);
+			return {buffer_ + effAddr, count};
+		}
+	}
+
+	assert(false);
+	return {};
+}
+
 void Mapper_NROM::WritePrg(uint16_t addr, uint8_t val) {
 	tfm::printf("ERROR: Invalid PRG write address at 0x%04X!", addr);
 	assert(false);
@@ -47,6 +66,10 @@ void Mapper_NROM::WritePrg(uint16_t addr, uint8_t val) {
 
 uint8_t Mapper_NROM::ReadChar(uint16_t addr) {
 	return buffer_[descriptor_.chrRomStart + addr];
+}
+
+std::span<uint8_t> Mapper_NROM::ReadChrN(uint16_t addr, uint16_t count) {
+	return {buffer_ + descriptor_.chrRomStart + addr, count};
 }
 
 void Mapper_NROM::WriteChar(uint16_t addr, uint8_t val) {
