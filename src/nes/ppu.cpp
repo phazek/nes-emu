@@ -365,7 +365,7 @@ uint8_t Ppu2C02::HandleDataRead(bool silent) {
 	}
 
 	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
-		vramBuffer_ = result ;
+		vramBuffer_ = result;
 	}
 
 	vramAddress_ += controlState_.addressIncrement;
