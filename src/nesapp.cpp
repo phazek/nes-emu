@@ -29,7 +29,7 @@ bool NesApp::OnUserCreate() {
 
 bool NesApp::OnUserUpdate(float fElapsedTime) {
 	if (GetKey(olc::Key::SPACE).bReleased) paused_ = !paused_;
-	if (GetKey(olc::Key::Q).bReleased) return false;
+	if (GetKey(olc::Key::ESCAPE).bReleased) return false;
 	if (GetKey(olc::Key::PGDN).bReleased)
 	    tickDuration_ *= 2;
 	if (GetKey(olc::Key::PGUP).bReleased)
