@@ -37,6 +37,8 @@ constexpr std::array<uint16_t, 2> kPatternTableStart = {0x0000, 0x1000};
 constexpr std::array<uint16_t, 4> kNameTableStart = {0x2000, 0x2400, 0x2800, 0x2C00};
 constexpr uint16_t kPaletteTableStart = 0x3F00;
 constexpr uint16_t kNameTableSize = 0x03FF;
+constexpr uint16_t kAttributeTableOffset = 0x3C0;
+constexpr uint8_t kTileDataSize = 16;
 
 struct OAMEntry {
 	uint8_t y;
@@ -365,7 +367,7 @@ uint8_t Ppu2C02::HandleDataRead(bool silent) {
 	}
 
 	if (IsInRange(kPaletteTableStart, kPaletteTableStart + 0x001F, addr)) {
-		vramBuffer_ = result ;
+		vramBuffer_ = result;
 	}
 
 	vramAddress_ += controlState_.addressIncrement;
@@ -450,7 +452,7 @@ void Ppu2C02::DrawBackgroundLayers() {
 		memset(bgBuffer.data(), 0, bgBuffer.size() * sizeof(BufferDot));
 
 		const uint16_t nameTableBase = kNameTableStart[bufIdx] - kNameTableStart[0];
-		const uint16_t attrTableBase = nameTableBase + 0x3C0;
+		const uint16_t attrTableBase = nameTableBase + kAttributeTableOffset;
 
 		for (int row = 0; row < 30; ++row) {
 			for (int col = 0; col < 32; ++col) {
@@ -458,9 +460,9 @@ void Ppu2C02::DrawBackgroundLayers() {
 				auto patternIdx = vramStorage_[idx];
 				auto patternStartAddr =
 				    controlState_.backgroundTableIdx * 0x1000 +
-				    patternIdx * 16;
+				    patternIdx * kTileDataSize;
 
-				t.FromData(bus_->ReadChrN(patternStartAddr, 16));
+				t.FromData(bus_->ReadChrN(patternStartAddr, kTileDataSize));
 
 				auto paletteIdx = GetPaletteIdx(attrTableBase, row, col);
 				for (int i = 0; i < 8*8; ++i) {
@@ -529,9 +531,12 @@ void Ppu2C02::DrawSpriteLayer() {
 }
 
 uint8_t Ppu2C02::GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col) {
-	auto attr = vramStorage_[attrTableBase + (row / 4) * 8 + (col / 4)];
-	auto id = ((row & 1) << 1) | (col & 1);
-	//
+	auto attrIdx = (row / 4) * 8 + (col / 4);
+	auto attr = vramStorage_[attrTableBase + attrIdx];
+	uint8_t id = 0;
+	id |= (row % 4 < 2) ? 0 : 2;
+	id |= (col % 4 < 2) ? 0 : 1;
+
 	//   -----------
 	//  | r0  | r0  |
 	//  | c0  | c1  |
@@ -539,7 +544,7 @@ uint8_t Ppu2C02::GetPaletteIdx(uint16_t attrTableBase, uint8_t row, uint8_t col)
 	//  | r1  | r1  |
 	//  | c0  | c1  |
 	//   -----------
-	//
+
 	switch (id) {
 		case 0b00: return attr  & 0x03;
 		case 0b01: return (attr & 0x0C) >> 2;
