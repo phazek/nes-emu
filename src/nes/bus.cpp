@@ -4,6 +4,8 @@
 #include "utils.h"
 #include "types.h"
 
+#include <assert.h>
+
 namespace nes {
 
 uint8_t Bus::Read(uint16_t addr, bool silent) {
