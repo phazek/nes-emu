@@ -3,6 +3,7 @@
 #include "tfm/tinyformat.h"
 #include "mapper_nrom.h"
 #include "mapper_mmc1.h"
+#include "mapper_cnrom.h"
 
 namespace nes::mapper {
 
@@ -12,9 +13,10 @@ MapperBase* MapperFactory::CreateMapper(uint8_t* buffer,
     switch (desc.mapperType) {
 		case 0: return new Mapper_NROM(buffer, bufSize, desc);
 		case 1: return new Mapper_MMC1(buffer, bufSize, desc);
+		case 3: return new Mapper_CNROM(buffer, bufSize, desc);
     }
 
-    tfm::printf("ERROR: unsupported mapper id %d", desc.mapperType);
+    tfm::printf("ERROR: unsupported mapper id %d\n", desc.mapperType);
     return nullptr;
 }
 
