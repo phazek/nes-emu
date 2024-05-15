@@ -7,7 +7,23 @@ constexpr uint64_t kClockFrequency = 21477272; // Hz
 constexpr uint64_t kPPUFrequency = kClockFrequency / 4; // Hz
 constexpr float kPPUTickDuration = 1.f / kPPUFrequency; // s
 
-} // namespace
+const olc::vi2d kChrBankDisplayPos{80, 80};
+
+void DecodeTileData(const std::span<uint8_t> data,
+			const Ppu2C02::Palette& palette, olc::Sprite& output) {
+	Tile t;
+	t.FromData(data);
+	for (int y = 0; y < 8; ++y) {
+		for (int x = 0; x < 8; ++x) {
+			int idx = y * 8 + x;
+			output.SetPixel(
+			    x, y,
+			    kColorPalette[palette[t.data[idx]]].ToPixel());
+		}
+	}
+}
+
+}  // namespace
 
 NesApp::NesApp()
 : bus_()
@@ -31,10 +47,11 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 	if (GetKey(olc::Key::SPACE).bReleased) paused_ = !paused_;
 	if (GetKey(olc::Key::ESCAPE).bReleased) return false;
 	if (GetKey(olc::Key::PGDN).bReleased)
-	    tickDuration_ *= 2;
+		tickDuration_ *= 2;
 	if (GetKey(olc::Key::PGUP).bReleased)
 		tickDuration_ /= 2;
 
+	if (GetKey(olc::Key::C).bReleased) displayChrBanks_ = !displayChrBanks_;
 
 	if (GetKey(olc::Key::A).bPressed) con1_.PressButton(Controller::Button::kStart);
 	if (GetKey(olc::Key::A).bReleased) con1_.ReleaseButton(Controller::Button::kStart);
@@ -65,23 +82,57 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 		timeToRun_ -= tickDuration_;
 	}
 
-	// Display CPU state
-	auto state = cpu_.GetState();
 	Clear(olc::DARK_BLUE);
-	DrawLine(120, 0, 120, ScreenHeight(), olc::WHITE);
-	int y = 1;
-	DrawString(10, y++ * 10, tfm::format("PC:  0x%04X", state.pc));
-	DrawString(10, y++ * 10, tfm::format("A:   0x%02X", state.acc));
-	DrawString(10, y++ * 10, tfm::format("X:   0x%02X", state.x));
-	DrawString(10, y++ * 10, tfm::format("Y:   0x%02X", state.y));
-	DrawString(10, y++ * 10, tfm::format("SP:  0x%02X", state.stackPtr));
-	DrawString(10, y++ * 10, tfm::format("P:   0x%02X", state.status));
-	DrawString(10, y++ * 10, tfm::format("CYC: %06d", state.cycle));
-	DrawLine(0, y * 10, 120, y * 10, olc::WHITE);
-	++y;
 
-	// Display palette
-	DrawString(10, y++ * 10, "Palettes");
+	DrawSprite(121, 0, &frameBufferSprite_, 2);
+	RenderSidePanel();
+
+	if (displayChrBanks_) {
+		RenderChrBanks();
+	}
+
+	return true;
+}
+
+void NesApp::InsertCartridge(Cartridge* cart) {
+	bus_.InsertCartridge(cart);
+}
+
+void NesApp::RenderChrBanks() {
+	olc::Sprite tileSprite{8, 8};
+	auto& palette = ppu_.GetFramePalette()[4];
+	std::span<uint8_t> bank = bus_.ReadChrN(0, 0x2000);
+
+	FillRect(75, 75, 512 + 32 + 10, 256 + 16 + 10,
+		 olc::Pixel{255, 200, 200});
+
+	for (int row = 0; row < 16; ++row) {
+		for (int col = 0; col < 32; ++col) {
+			int idx = row * 32 + col;
+			DecodeTileData(bank.subspan(idx * 16, 16), palette,
+					   tileSprite);
+			DrawSprite(80 + col * 16 + (col > 0 ? col : 0),
+				   80 + row * 16 + (row > 0 ? row : 0),
+				   &tileSprite, 2);
+		}
+	}
+}
+
+void NesApp::RenderSidePanel() {
+	auto state = cpu_.GetState();
+	DrawLine(120, 0, 120, ScreenHeight(), olc::WHITE);
+	int yPos = 1;
+	DrawString(10, yPos++ * 10, tfm::format("PC:  0x%04X", state.pc));
+	DrawString(10, yPos++ * 10, tfm::format("A:   0x%02X", state.acc));
+	DrawString(10, yPos++ * 10, tfm::format("X:   0x%02X", state.x));
+	DrawString(10, yPos++ * 10, tfm::format("Y:   0x%02X", state.y));
+	DrawString(10, yPos++ * 10, tfm::format("SP:  0x%02X", state.stackPtr));
+	DrawString(10, yPos++ * 10, tfm::format("P:   0x%02X", state.status));
+	DrawString(10, yPos++ * 10, tfm::format("CYC: %06d", state.cycle));
+	DrawLine(0, yPos * 10, 120, yPos * 10, olc::WHITE);
+	++yPos;
+
+	DrawString(10, yPos++ * 10, "Palettes");
 	auto& framePal = ppu_.GetFramePalette();
 
 	for (int palIdx = 0; palIdx < 8; ++palIdx) {
@@ -89,21 +140,18 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 		for (int colorIdx = 0; colorIdx < 4; ++colorIdx) {
 			uint8_t colorId = pal[colorIdx];
 			auto c = kColorPalette[colorId];
-			FillRect(colorIdx * 30, y * 10, 30, 30, {c.r, c.g, c.b, c.a});
-			DrawString(colorIdx * 30 + 10, y * 10 + 10, tfm::format("%02X", colorId), olc::Pixel(255 - c.r, 255 - c.g, 255 - c.b, 255));
+			FillRect(colorIdx * 30, yPos * 10, 30, 30,
+				 {c.r, c.g, c.b, c.a});
+			DrawString(
+				colorIdx * 30 + 10, yPos * 10 + 10,
+				tfm::format("%02X", colorId),
+				olc::Pixel(255 - c.r, 255 - c.g, 255 - c.b, 255));
 		}
-		y += 3;
+		yPos += 3;
 	}
 
 	olc::Sprite spriteZero{8, 8};
-	memcpy((void*)spriteZero.GetData(), (void*)ppu_.GetSpriteZero().data(), 8 * 8 * sizeof(RGBA));
-	DrawSprite(0, y * 10, &spriteZero, 4);
-
-	DrawSprite(121, 0, &frameBufferSprite_, 2);
-
-	return true;
-}
-
-void NesApp::InsertCartridge(Cartridge* cart) {
-	bus_.InsertCartridge(cart);
+	memcpy((void*)spriteZero.GetData(), (void*)ppu_.GetSpriteZero().data(),
+		   8 * 8 * sizeof(RGBA));
+	DrawSprite(0, yPos * 10, &spriteZero, 4);
 }

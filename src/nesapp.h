@@ -17,6 +17,9 @@ public:
 	void InsertCartridge(Cartridge* cart);
 
 private:
+	void RenderSidePanel();
+	void RenderChrBanks();
+
 	Bus bus_;
 	Cpu6502 cpu_;
 	Ppu2C02 ppu_;
@@ -25,6 +28,7 @@ private:
 	bool paused_ = false;
 	float tickDuration_ = 0.f;
 	float timeToRun_ = 0.f;
+	bool displayChrBanks_ = false;
 
 	olc::Sprite frameBufferSprite_;
 };

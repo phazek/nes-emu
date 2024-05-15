@@ -10,20 +10,6 @@ namespace nes {
 
 namespace {
 
-struct Tile {
-	std::array<uint8_t, 8 * 8> data;
-
-	void FromData(const std::span<uint8_t>& src) {
-		for (int row = 0; row < 8; ++row) {
-			for (int col = 0; col < 8; ++col) {
-				bool ll = !!(src[row] & (1 << (7 - col)));
-				bool hh = !!(src[8 + row] & (1 << (7 - col)));
-				data[row * 8 + col] = (hh ? 2 : 0) | (ll ? 1 : 0);
-			}
-		}
-	}
-};
-
 constexpr uint16_t kPPUCTRL = 0x2000;   // WRITE
 constexpr uint16_t kPPUMASK = 0x2001;   // WRITE
 constexpr uint16_t kPPUSTATUS = 0x2002; // READ
