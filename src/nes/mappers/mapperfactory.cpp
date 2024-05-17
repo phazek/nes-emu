@@ -1,8 +1,8 @@
-#include "mapperfactory.h"
+#include "nes/mappers/mapperfactory.h"
 
 #include "tfm/tinyformat.h"
-#include "mapper_nrom.h"
-#include "mapper_mmc1.h"
+#include "nes/mappers/mapper_nrom.h"
+#include "nes/mappers/mapper_mmc1.h"
 
 namespace nes::mapper {
 

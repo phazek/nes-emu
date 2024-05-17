@@ -1,5 +1,5 @@
-#include "cpu6502.h"
-#include "instructions.h"
+#include "nes/cpu6502.h"
+#include "nes/instructions.h"
 
 #include "tfm/tinyformat.h"
 

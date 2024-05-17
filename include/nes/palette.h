@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "nes/types.h"
 
 #include <cstdint>
 #include <array>

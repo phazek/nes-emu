@@ -1,8 +1,8 @@
-#include "bus.h"
+#include "nes/bus.h"
 
-#include "ppu.h"
-#include "utils.h"
-#include "types.h"
+#include "nes/ppu.h"
+#include "nes/utils.h"
+#include "nes/types.h"
 
 #include <assert.h>
 

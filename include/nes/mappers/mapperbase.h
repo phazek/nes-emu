@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../romdescriptor.h"
+#include "nes/romdescriptor.h"
 
 #include <cstdint>
 #include <string>

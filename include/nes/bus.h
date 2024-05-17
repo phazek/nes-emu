@@ -4,8 +4,8 @@
 #include <array>
 #include <span>
 
-#include "cartridge.h"
-#include "controller.h"
+#include "nes/cartridge.h"
+#include "nes/controller.h"
 
 namespace nes {
 

@@ -5,7 +5,7 @@
 #include <vector>
 #include <span>
 
-#include "palette.h"
+#include "nes/palette.h"
 
 namespace nes {
 

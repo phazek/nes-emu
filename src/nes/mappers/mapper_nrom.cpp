@@ -1,7 +1,7 @@
-#include "mapper_nrom.h"
+#include "nes/mappers/mapper_nrom.h"
 
 #include "tfm/tinyformat.h"
-#include "../utils.h"
+#include "nes/utils.h"
 
 namespace nes::mapper {
 

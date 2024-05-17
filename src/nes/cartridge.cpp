@@ -1,6 +1,6 @@
-#include "cartridge.h"
+#include "nes/cartridge.h"
 #include "tfm/tinyformat.h"
-#include "mappers/mapperfactory.h"
+#include "nes/mappers/mapperfactory.h"
 
 #include <array>
 #include <fstream>

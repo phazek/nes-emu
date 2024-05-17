@@ -1,8 +1,8 @@
-#include "ppu.h"
+#include "nes/ppu.h"
 
-#include "bus.h"
-#include "types.h"
-#include "utils.h"
+#include "nes/bus.h"
+#include "nes/types.h"
+#include "nes/utils.h"
 
 #include <tfm/tinyformat.h>
 

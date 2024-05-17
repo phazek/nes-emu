@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bus.h"
+#include "nes/bus.h"
 
 namespace nes {
 

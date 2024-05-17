@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mappers/mapperbase.h"
+#include "nes/mappers/mapperbase.h"
 
 #include <string>
 #include <memory>

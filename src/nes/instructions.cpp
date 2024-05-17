@@ -1,4 +1,4 @@
-#include "instructions.h"
+#include "nes/instructions.h"
 
 #include <string>
 

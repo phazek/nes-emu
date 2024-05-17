@@ -1,7 +1,7 @@
-#include "mapper_mmc1.h"
+#include "nes/mappers/mapper_mmc1.h"
 
 #include "tfm/tinyformat.h"
-#include "../utils.h"
+#include "nes/utils.h"
 
 namespace nes::mapper {
 

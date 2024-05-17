@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "mapperbase.h"
+#include "nes/mappers/mapperbase.h"
 
 namespace nes::mapper {
 

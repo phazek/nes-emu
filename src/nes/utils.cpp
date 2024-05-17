@@ -1,5 +1,4 @@
-#include "utils.h"
-
+#include "nes/utils.h"
 
 namespace nes {
 
