@@ -36,6 +36,7 @@ void Cpu6502::Tick() {
 	UpdateState();
 
 	++cycle_;
+    // compensate for multi-cycle instructions
     if (cycleLeft_) {
 		cycleLeft_--;
 		return;
@@ -52,7 +53,6 @@ void Cpu6502::Tick() {
 		pc_ = Join(LL, HH);
 	}
 
-    // compensate for multi-cycle instructions
     auto opCode = bus_->Read(pc_);
     auto op = kOpDecoder.at(opCode);
     auto operand = FetchOperand(op.addrMode);
@@ -60,965 +60,227 @@ void Cpu6502::Tick() {
 
     switch (op.instr) {
 		case Instruction::kADC: {
-			const uint16_t sum = acc_ + operand.val + (IsSet(Flag::C) ? 1 : 0);
-			const uint8_t result = sum & 0xFF;
-			SetFlag(Flag::C, sum >> 8);
-			SetFlag(Flag::V, !!((acc_ ^ result) & (operand.val^ result) & 0x80));
-			SetFlag(Flag::N, !!(result & 0x80));
-			SetFlag(Flag::Z, !result);
-			acc_ = result;
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
-			break;
+		    ADC(op, operand);
+		    break;
 		}
 		case Instruction::kAND: {
-			acc_ = acc_ & operand.val;
-
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			AND(op, operand);
 			break;
 		}
 		case Instruction::kASL: {
-			uint8_t res = operand.val << 1;
-
-			SetFlag(Flag::C, operand.val & 0x80);
-			SetFlag(Flag::N, res & 0x80);
-			SetFlag(Flag::Z, res == 0);
-
-			if (operand.addr == 0xFFFF) {
-				acc_ = res;
-			} else {
-				bus_->Write(operand.addr, res);
-			}
-
-			switch (op.addrMode) {
-				case AddressMode::kACC:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kABS:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 7;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 6;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			ASL(op, operand);
 		    break;
 		}
 		case Instruction::kBCC: {
-			auto oldPc = pc_;
-		    if (!IsSet(Flag::C)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BCC(op, operand);
 			break;
 		}
 		case Instruction::kBCS: {
-			auto oldPc = pc_;
-		    if (IsSet(Flag::C)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BCS(op, operand);
 			break;
 		}
 		case Instruction::kBEQ: {
-			auto oldPc = pc_;
-		    if (IsSet(Flag::Z)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BEQ(op, operand);
 			break;
 		}
 		case Instruction::kBIT: {
-			SetFlag(Flag::N, operand.val & 0b10000000);
-			SetFlag(Flag::V, operand.val & 0b01000000);
-			SetFlag(Flag::Z, !(acc_ & operand.val));
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			BIT(op, operand);
 			break;
 		}
 		case Instruction::kBMI: {
-			auto oldPc = pc_;
-		    if (IsSet(Flag::N)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BMI(op, operand);
 			break;
 		}
 		case Instruction::kBNE: {
-			auto oldPc = pc_;
-		    if (!IsSet(Flag::Z)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BNE(op, operand);
 			break;
 		}
 		case Instruction::kBPL: {
-			auto oldPc = pc_;
-		    if (!IsSet(Flag::N)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BPL(op, operand);
 			break;
 		}
 		case Instruction::kBRK: {
-			auto addr = pc_ + 1;
-			PushStack(addr >> 8); // HH
-			PushStack(addr & 0xFF); // LL
-			SetFlag(Flag::I, true);
-			PushStack(status_);
-			cycleLeft_ += 7;
+			BRK(op, operand);
 			break;
 		}
 		case Instruction::kBVC: {
-			auto oldPc = pc_;
-		    if (!IsSet(Flag::V)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BVC(op, operand);
 			break;
 		}
 		case Instruction::kBVS: {
-			auto oldPc = pc_;
-		    if (IsSet(Flag::V)) {
-				pc_ += (int8_t)operand.val;
-				cycleLeft_ += (oldPc & 0xFF00) == (pc_ & 0xFF00) ? 1 : 2;
-		    }
-			cycleLeft_ += 2;
+			BVS(op, operand);
 			break;
 		}
 		case Instruction::kCLC: {
-			SetFlag(Flag::C, false);
-			cycleLeft_ += 2;
+			CLC(op, operand);
 			break;
 		}
 		case Instruction::kCLD: {
-			SetFlag(Flag::D, false);
-			cycleLeft_ += 2;
+			CLD(op, operand);
 			break;
 		}
 		case Instruction::kCLI: {
-			SetFlag(Flag::I, false);
-			cycleLeft_ += 2;
+			CLI(op, operand);
 			break;
 		}
 		case Instruction::kCLV: {
-			SetFlag(Flag::V, false);
-			cycleLeft_ += 2;
+			CLV(op, operand);
 			break;
 		}
 		case Instruction::kCMP: {
-			auto res = acc_ - operand.val;
-			SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
-			SetFlag(Flag::Z, res == 0);
-			SetFlag(Flag::C, res >= 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			CMP(op, operand);
 			break;
 		}
 		case Instruction::kCPX: {
-			auto res = x_ - operand.val;
-			SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
-			SetFlag(Flag::Z, res == 0);
-			SetFlag(Flag::C, res >= 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			CPX(op, operand);
 			break;
 		}
 		case Instruction::kCPY: {
-			auto res = y_ - operand.val;
-			SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
-			SetFlag(Flag::Z, res == 0);
-			SetFlag(Flag::C, res >= 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			CPY(op, operand);
 			break;
 		}
 		case Instruction::kDEC: {
-			uint8_t res = operand.val - 1;
-			SetFlag(Flag::N, res & 0x80);
-			SetFlag(Flag::Z, res == 0);
-			bus_->Write(operand.addr, res);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 7;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 6;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			DEC(op, operand);
 			break;
 		}
 		case Instruction::kDEX: {
-			x_--;
-			SetFlag(Flag::N, x_ & 0x80);
-			SetFlag(Flag::Z, x_ == 0);
-
-			cycleLeft_ += 2;
+			DEX(op, operand);
 			break;
 		}
 		case Instruction::kDEY: {
-			y_--;
-			SetFlag(Flag::N, y_ & 0x80);
-			SetFlag(Flag::Z, y_ == 0);
-
-			cycleLeft_ += 2;
+			DEY(op, operand);
 			break;
 		}
 		case Instruction::kEOR: {
-			acc_ ^= operand.val;
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			EOR(op, operand);
 			break;
 		}
 		case Instruction::kINC: {
-			uint8_t res = operand.val + 1;
-			SetFlag(Flag::N, res & 0x80);
-			SetFlag(Flag::Z, res == 0);
-			bus_->Write(operand.addr, res);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 7;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 6;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			INC(op, operand);
 			break;
 		}
 		case Instruction::kINX: {
-			x_++;
-			SetFlag(Flag::N, x_ & 0x80);
-			SetFlag(Flag::Z, x_ == 0);
-
-			cycleLeft_ += 2;
+			INX(op, operand);
 			break;
 		}
 		case Instruction::kINY: {
-			y_++;
-			SetFlag(Flag::N, y_ & 0x80);
-			SetFlag(Flag::Z, y_ == 0);
-
-			cycleLeft_ += 2;
+			INY(op, operand);
 			break;
 		}
 		case Instruction::kJMP: {
-			pc_ = operand.addr;
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kIND:
-					cycleLeft_ += 5;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			JMP(op, operand);
 			break;
 		}
 		case Instruction::kJSR: {
-			auto addr = pc_ - 1;
-			PushStack(addr >> 8); // HH
-			PushStack(addr & 0xFF); // LL
-			pc_ = operand.addr;
-
-			cycleLeft_ += 6;
+			JSR(op, operand);
 			break;
 		}
 		case Instruction::kLDA: {
-			acc_ = operand.val;
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			LDA(op, operand);
 			break;
 		}
 		case Instruction::kLDX: {
-			x_ = operand.val;
-			SetFlag(Flag::N, x_ & 0x80);
-			SetFlag(Flag::Z, x_ == 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPY:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			LDX(op, operand);
 			break;
 		}
 		case Instruction::kLDY: {
-			y_ = operand.val;
-			SetFlag(Flag::N, y_ & 0x80);
-			SetFlag(Flag::Z, y_ == 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			LDY(op, operand);
 			break;
 		}
 		case Instruction::kLSR: {
-			uint8_t res = operand.val >> 1;
-
-			SetFlag(Flag::C, operand.val & 0x01);
-			SetFlag(Flag::N, false);
-			SetFlag(Flag::Z, res == 0);
-
-			if (operand.addr == 0xFFFF) {
-				acc_ = res;
-			} else {
-				bus_->Write(operand.addr, res);
-			}
-
-			switch (op.addrMode) {
-				case AddressMode::kACC:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kABS:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 7;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 6;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			LSR(op, operand);
 		    break;
 		}
 		case Instruction::kNOP: {
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kIMP:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			NOP(op, operand);
 			break;
 		}
 		case Instruction::kORA: {
-			acc_ = acc_ | operand.val;
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			ORA(op, operand);
 			break;
 		}
 		case Instruction::kPHA: {
-			PushStack(acc_);
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 3;
+			PHA(op, operand);
 			break;
 		}
 		case Instruction::kPHP: {
-			PushStack(status_ | Flag::X | Flag::B);
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 3;
+			PHP(op, operand);
 			break;
 		}
 		case Instruction::kPLA: {
-			acc_ = PopStack();
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 4;
+			PLA(op, operand);
 			break;
 		}
 		case Instruction::kPLP: {
-		    status_ = (PopStack() & ~Flag::B) | Flag::X;
-		    assert(op.addrMode == AddressMode::kIMP);
-		    cycleLeft_ += 4;
+			PLP(op, operand);
 		    break;
 		}
 		case Instruction::kROL: {
-			uint8_t res = operand.val << 1;
-			res |= IsSet(Flag::C) ? 0x01 : 0x00;
-
-			SetFlag(Flag::C, operand.val & 0x80);
-			SetFlag(Flag::N, res & 0x80);
-			SetFlag(Flag::Z, res == 0);
-
-			if (operand.addr == 0xFFFF) {
-				acc_ = res;
-			} else {
-				bus_->Write(operand.addr, res);
-			}
-
-			switch (op.addrMode) {
-				case AddressMode::kACC:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kABS:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 7;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 6;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			ROL(op, operand);
 			break;
 		}
 		case Instruction::kROR: {
-			uint8_t res = operand.val >> 1;
-			res |= IsSet(Flag::C) ? 0x80 : 0x00;
-
-			SetFlag(Flag::C, operand.val & 0x01);
-			SetFlag(Flag::N, res & 0x80);
-			SetFlag(Flag::Z, res == 0);
-
-			if (operand.addr == 0xFFFF) {
-				acc_ = res;
-			} else {
-				bus_->Write(operand.addr, res);
-			}
-
-			switch (op.addrMode) {
-				case AddressMode::kACC:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kABS:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 7;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 6;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			ROR(op, operand);
 			break;
 		}
 		case Instruction::kRTI: {
-		    status_ = (PopStack() & ~Flag::B) | Flag::X;
-			uint16_t addr = PopStack(); // LL
-			addr |= PopStack() << 8; // HH
-			pc_ = addr;
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 6;
+			RTI(op, operand);
 			break;
 		}
 		case Instruction::kRTS: {
-			uint16_t addr = PopStack(); // LL
-			addr |= PopStack() << 8; // HH
-			pc_ = addr + 1;
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 6;
+			RTS(op, operand);
 			break;
 		}
 		case Instruction::kSBC: {
-			const uint16_t sum = acc_ + ~operand.val + (IsSet(Flag::C) ? 1 : 0);
-			const uint8_t result = sum & 0xFF;
-			SetFlag(Flag::C, !(sum >> 8));
-			SetFlag(Flag::V, !!((~(acc_ ^ ~operand.val)) & (acc_ ^ result) & 0x80));
-			SetFlag(Flag::N, !!(result & 0x80));
-			SetFlag(Flag::Z, !result);
-			acc_ = result;
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kIMM:
-					cycleLeft_ += 2;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			SBC(op, operand);
 			break;
 		}
 		case Instruction::kSEC: {
-			SetFlag(Flag::C, true);
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			SEC(op, operand);
 			break;
 		}
 		case Instruction::kSED: {
-			SetFlag(Flag::D, true);
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			SED(op, operand);
 			break;
 		}
 		case Instruction::kSEI: {
-			SetFlag(Flag::I, true);
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			SEI(op, operand);
 			break;
 		}
 		case Instruction::kSTA: {
-			bus_->Write(operand.addr, acc_);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kABX:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kABY:
-					cycleLeft_ += 5;
-					break;
-				case AddressMode::kINX:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kINY:
-					cycleLeft_ += 6;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			STA(op, operand);
 			break;
 		}
 		case Instruction::kSTX: {
-			bus_->Write(operand.addr, x_);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPY:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			STX(op, operand);
 			break;
 		}
 		case Instruction::kSTY: {
-			bus_->Write(operand.addr, y_);
-
-			switch (op.addrMode) {
-				case AddressMode::kABS:
-					cycleLeft_ += 4;
-					break;
-				case AddressMode::kZP:
-					cycleLeft_ += 3;
-					break;
-				case AddressMode::kZPX:
-					cycleLeft_ += 4;
-					break;
-				default: {
-					tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
-					assert(false);
-				}
-			}
+			STY(op, operand);
 			break;
 		}
 		case Instruction::kTAX: {
-			x_ = acc_;
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			TAX(op, operand);
 			break;
 		}
 		case Instruction::kTAY: {
-			y_ = acc_;
-			SetFlag(Flag::N, acc_ & 0x80);
-			SetFlag(Flag::Z, acc_ == 0);
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			TAY(op, operand);
 			break;
 		}
 		case Instruction::kTSX: {
-			x_ = stackPtr_;
-			SetFlag(Flag::N, stackPtr_ & 0x80);
-			SetFlag(Flag::Z, stackPtr_ == 0);
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			TSX(op, operand);
 			break;
 		}
 		case Instruction::kTXA: {
-			acc_ = x_;
-			SetFlag(Flag::N, x_ & 0x80);
-			SetFlag(Flag::Z, x_ == 0);
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			TXA(op, operand);
 			break;
 		}
 		case Instruction::kTXS: {
-			stackPtr_ = x_;
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			TXS(op, operand);
 			break;
 		}
 		case Instruction::kTYA: {
-			acc_ = y_;
-			SetFlag(Flag::N, y_ & 0x80);
-			SetFlag(Flag::Z, y_ == 0);
-
-			assert(op.addrMode == AddressMode::kIMP);
-			cycleLeft_ += 2;
+			TYA(op, operand);
 			break;
 		}
 		// "Illegal" Opcodes and Undocumented Instructions
@@ -1483,4 +745,985 @@ void Cpu6502::UpdateState() {
 	cpuState_.cycle = cycle_;
 }
 
+void Cpu6502::ADC(Operation op, Cpu6502::Operand operand) {
+	uint16_t sum = acc_ + operand.val + (IsSet(Flag::C) ? 1 : 0);
+	uint8_t result = sum & 0xFF;
+	SetFlag(Flag::C, sum >> 8);
+	SetFlag(Flag::V, !((acc_ ^ operand.val) & 0x80) && ((acc_ ^ result) & 0x80));
+	SetFlag(Flag::N, result & 0x80);
+	SetFlag(Flag::Z, !result);
+	acc_ = result;
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::AND(Operation op, Cpu6502::Operand operand) {
+	acc_ = acc_ & operand.val;
+
+	SetFlag(Flag::N, acc_ & 0x80);
+	SetFlag(Flag::Z, acc_ == 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::ASL(Operation op, Cpu6502::Operand operand) {
+	uint8_t res = operand.val << 1;
+
+	SetFlag(Flag::C, operand.val & 0x80);
+	SetFlag(Flag::N, res & 0x80);
+	SetFlag(Flag::Z, res == 0);
+
+	if (operand.addr == 0xFFFF) {
+		acc_ = res;
+	} else {
+		bus_->Write(operand.addr, res);
+	}
+
+	switch (op.addrMode) {
+		case AddressMode::kACC:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kABS:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 7;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 6;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::BCC(Operation op, Cpu6502::Operand operand) {
+	if (!IsSet(Flag::C)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::BCS(Operation op, Cpu6502::Operand operand) {
+	if (IsSet(Flag::C)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::BEQ(Operation op, Cpu6502::Operand operand) {
+	if (IsSet(Flag::Z)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::BIT(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::N, operand.val & 0x80);
+	SetFlag(Flag::V, operand.val & 0x40);
+	SetFlag(Flag::Z, !(acc_ & operand.val));
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::BMI(Operation op, Cpu6502::Operand operand) {
+	if (IsSet(Flag::N)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::BNE(Operation op, Cpu6502::Operand operand) {
+	if (!IsSet(Flag::Z)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::BPL(Operation op, Cpu6502::Operand operand) {
+	if (!IsSet(Flag::N)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::BRK(Operation op, Cpu6502::Operand operand) {
+	auto addr = pc_ + 1;
+	PushStack((addr >> 8) & 0xFF);
+	PushStack(addr & 0xFF);
+	PushStack(status_ | Flag::B | Flag::X);
+
+	pc_ = bus_->Read(0xFFFE) | (bus_->Read(0xFFFF) << 8);
+	SetFlag(Flag::I, true);
+
+	cycleLeft_ += 7;
+}
+
+void Cpu6502::BVC(Operation op, Cpu6502::Operand operand) {
+	if (!IsSet(Flag::V)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::BVS(Operation op, Cpu6502::Operand operand) {
+	if (IsSet(Flag::V)) {
+		pc_ += (int8_t)operand.val;
+		cycleLeft_ += 3 + (operand.boundaryCrossed ? 1 : 0);
+	} else {
+		cycleLeft_ += 2;
+	}
+}
+
+void Cpu6502::CLC(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::C, false);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::CLD(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::D, false);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::CLI(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::I, false);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::CLV(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::V, false);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::CMP(Operation op, Cpu6502::Operand operand) {
+	auto res = acc_ - operand.val;
+	SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
+	SetFlag(Flag::Z, res == 0);
+	SetFlag(Flag::C, res >= 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::CPX(Operation op, Cpu6502::Operand operand) {
+	auto res = x_ - operand.val;
+	SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
+	SetFlag(Flag::Z, res == 0);
+	SetFlag(Flag::C, res >= 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::CPY(Operation op, Cpu6502::Operand operand) {
+	auto res = y_ - operand.val;
+	SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
+	SetFlag(Flag::Z, res == 0);
+	SetFlag(Flag::C, res >= 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::DEC(Operation op, Cpu6502::Operand operand) {
+	uint8_t res = operand.val - 1;
+	SetFlag(Flag::N, res & 0x80);
+	SetFlag(Flag::Z, res == 0);
+	bus_->Write(operand.addr, res);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 7;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 6;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::DEX(Operation op, Cpu6502::Operand operand) {
+	x_--;
+	SetFlag(Flag::N, x_ & 0x80);
+	SetFlag(Flag::Z, x_ == 0);
+
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::DEY(Operation op, Cpu6502::Operand operand) {
+	y_--;
+	SetFlag(Flag::N, y_ & 0x80);
+	SetFlag(Flag::Z, y_ == 0);
+
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::EOR(Operation op, Cpu6502::Operand operand) {
+	acc_ ^= operand.val;
+	SetFlag(Flag::N, acc_ & 0x80);
+	SetFlag(Flag::Z, acc_ == 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::INC(Operation op, Cpu6502::Operand operand) {
+	uint8_t res = operand.val + 1;
+	SetFlag(Flag::N, res & 0x80);
+	SetFlag(Flag::Z, res == 0);
+	bus_->Write(operand.addr, res);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 7;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 6;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::INX(Operation op, Cpu6502::Operand operand) {
+	x_++;
+	SetFlag(Flag::N, x_ & 0x80);
+	SetFlag(Flag::Z, x_ == 0);
+
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::INY(Operation op, Cpu6502::Operand operand) {
+	y_++;
+	SetFlag(Flag::N, y_ & 0x80);
+	SetFlag(Flag::Z, y_ == 0);
+
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::JMP(Operation op, Cpu6502::Operand operand) {
+	pc_ = operand.addr;
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kIND:
+			cycleLeft_ += 5;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n", ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::JSR(Operation op, Cpu6502::Operand operand) {
+	auto addr = pc_ - 1;
+	PushStack(addr >> 8); // HH
+	PushStack(addr & 0xFF); // LL
+	pc_ = operand.addr;
+
+	cycleLeft_ += 6;
+}
+
+void Cpu6502::LDA(Operation op, Cpu6502::Operand operand) {
+	acc_ = operand.val;
+	SetFlag(Flag::N, acc_ & 0x80);
+	SetFlag(Flag::Z, acc_ == 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::LDX(Operation op, Cpu6502::Operand operand) {
+	x_ = operand.val;
+	SetFlag(Flag::N, x_ & 0x80);
+	SetFlag(Flag::Z, x_ == 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPY:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::LDY(Operation op, Cpu6502::Operand operand) {
+	y_ = operand.val;
+	SetFlag(Flag::N, y_ & 0x80);
+	SetFlag(Flag::Z, y_ == 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::LSR(Operation op, Cpu6502::Operand operand) {
+	uint8_t res = operand.val >> 1;
+
+	SetFlag(Flag::C, operand.val & 0x01);
+	SetFlag(Flag::N, false);
+	SetFlag(Flag::Z, res == 0);
+
+	if (operand.addr == 0xFFFF) {
+		acc_ = res;
+	} else {
+		bus_->Write(operand.addr, res);
+	}
+
+	switch (op.addrMode) {
+		case AddressMode::kACC:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kABS:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 7;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 6;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::NOP(Operation op, Cpu6502::Operand operand) {
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kIMP:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::ORA(Operation op, Cpu6502::Operand operand) {
+	acc_ = acc_ | operand.val;
+	SetFlag(Flag::N, acc_ & 0x80);
+	SetFlag(Flag::Z, acc_ == 0);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::PHA(Operation op, Cpu6502::Operand operand) {
+	PushStack(acc_);
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 3;
+}
+
+void Cpu6502::PHP(Operation op, Cpu6502::Operand operand) {
+	PushStack(status_ | Flag::X | Flag::B);
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 3;
+}
+
+void Cpu6502::PLA(Operation op, Cpu6502::Operand operand) {
+	acc_ = PopStack();
+	SetFlag(Flag::N, acc_ & 0x80);
+	SetFlag(Flag::Z, acc_ == 0);
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 4;
+}
+
+void Cpu6502::PLP(Operation op, Cpu6502::Operand operand) {
+	status_ = (PopStack() & ~Flag::B) | Flag::X;
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 4;
+}
+
+void Cpu6502::ROL(Operation op, Cpu6502::Operand operand) {
+	uint8_t res = operand.val << 1;
+	res |= IsSet(Flag::C) ? 0x01 : 0x00;
+
+	SetFlag(Flag::C, operand.val & 0x80);
+	SetFlag(Flag::N, res & 0x80);
+	SetFlag(Flag::Z, res == 0);
+
+	if (operand.addr == 0xFFFF) {
+		acc_ = res;
+	} else {
+		bus_->Write(operand.addr, res);
+	}
+
+	switch (op.addrMode) {
+		case AddressMode::kACC:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kABS:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 7;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 6;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::ROR(Operation op, Cpu6502::Operand operand) {
+	uint8_t res = operand.val >> 1;
+	res |= IsSet(Flag::C) ? 0x80 : 0x00;
+
+	SetFlag(Flag::C, operand.val & 0x01);
+	SetFlag(Flag::N, res & 0x80);
+	SetFlag(Flag::Z, res == 0);
+
+	if (operand.addr == 0xFFFF) {
+		acc_ = res;
+	} else {
+		bus_->Write(operand.addr, res);
+	}
+
+	switch (op.addrMode) {
+		case AddressMode::kACC:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kABS:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 7;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 6;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::RTI(Operation op, Cpu6502::Operand operand) {
+	status_ = (PopStack() & ~Flag::B) | Flag::X;
+	uint16_t addr = PopStack();  // LL
+	addr |= PopStack() << 8;     // HH
+	pc_ = addr;
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 6;
+}
+
+void Cpu6502::RTS(Operation op, Cpu6502::Operand operand) {
+	uint16_t addr = PopStack();  // LL
+	addr |= PopStack() << 8;     // HH
+	pc_ = addr + 1;
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 6;
+}
+
+void Cpu6502::SBC(Operation op, Cpu6502::Operand operand) {
+	const uint16_t sum = acc_ + ~operand.val + (IsSet(Flag::C) ? 1 : 0);
+	const uint8_t result = sum & 0xFF;
+	SetFlag(Flag::C, !(sum >> 8));
+	SetFlag(Flag::V, !!((~(acc_ ^ ~operand.val)) & (acc_ ^ result) & 0x80));
+	SetFlag(Flag::N, !!(result & 0x80));
+	SetFlag(Flag::Z, !result);
+	acc_ = result;
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 4 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kIMM:
+			cycleLeft_ += 2;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 5 + (operand.boundaryCrossed ? 1 : 0);
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::SEC(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::C, true);
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::SED(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::D, true);
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::SEI(Operation op, Cpu6502::Operand operand) {
+	SetFlag(Flag::I, true);
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::STA(Operation op, Cpu6502::Operand operand) {
+	bus_->Write(operand.addr, acc_);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kABX:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kABY:
+			cycleLeft_ += 5;
+			break;
+		case AddressMode::kINX:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kINY:
+			cycleLeft_ += 6;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::STX(Operation op, Cpu6502::Operand operand) {
+	bus_->Write(operand.addr, x_);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPY:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::STY(Operation op, Cpu6502::Operand operand) {
+	bus_->Write(operand.addr, y_);
+
+	switch (op.addrMode) {
+		case AddressMode::kABS:
+			cycleLeft_ += 4;
+			break;
+		case AddressMode::kZP:
+			cycleLeft_ += 3;
+			break;
+		case AddressMode::kZPX:
+			cycleLeft_ += 4;
+			break;
+		default: {
+			tfm::printf("Unexpected address mode %s\n",
+				    ToString(op.addrMode));
+			assert(false);
+		}
+	}
+}
+
+void Cpu6502::TAX(Operation op, Cpu6502::Operand operand) {
+	x_ = acc_;
+	SetFlag(Flag::N, acc_ & 0x80);
+	SetFlag(Flag::Z, acc_ == 0);
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::TAY(Operation op, Cpu6502::Operand operand) {
+	y_ = acc_;
+	SetFlag(Flag::N, acc_ & 0x80);
+	SetFlag(Flag::Z, acc_ == 0);
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::TSX(Operation op, Cpu6502::Operand operand) {
+	x_ = stackPtr_;
+	SetFlag(Flag::N, stackPtr_ & 0x80);
+	SetFlag(Flag::Z, stackPtr_ == 0);
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::TXA(Operation op, Cpu6502::Operand operand) {
+	acc_ = x_;
+	SetFlag(Flag::N, x_ & 0x80);
+	SetFlag(Flag::Z, x_ == 0);
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::TXS(Operation op, Cpu6502::Operand operand) {
+	stackPtr_ = x_;
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
+
+void Cpu6502::TYA(Operation op, Cpu6502::Operand operand) {
+	acc_ = y_;
+	SetFlag(Flag::N, y_ & 0x80);
+	SetFlag(Flag::Z, y_ == 0);
+
+	assert(op.addrMode == AddressMode::kIMP);
+	cycleLeft_ += 2;
+}
 } // namespace nes

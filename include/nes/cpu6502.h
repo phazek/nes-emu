@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nes/bus.h"
+#include "nes/instructions.h"
 
 namespace nes {
 
@@ -64,6 +65,64 @@ private:
 	uint8_t PopStack();
 
 	void UpdateState();
-};
 
+	void ADC(Operation op, Cpu6502::Operand operand);
+	void AND(Operation op, Cpu6502::Operand operand);
+	void ASL(Operation op, Cpu6502::Operand operand);
+	void BCC(Operation op, Cpu6502::Operand operand);
+	void BCS(Operation op, Cpu6502::Operand operand);
+	void BEQ(Operation op, Cpu6502::Operand operand);
+	void BIT(Operation op, Cpu6502::Operand operand);
+	void BMI(Operation op, Cpu6502::Operand operand);
+	void BNE(Operation op, Cpu6502::Operand operand);
+	void BPL(Operation op, Cpu6502::Operand operand);
+	void BRK(Operation op, Cpu6502::Operand operand);
+	void BVC(Operation op, Cpu6502::Operand operand);
+	void BVS(Operation op, Cpu6502::Operand operand);
+	void CLC(Operation op, Cpu6502::Operand operand);
+	void CLD(Operation op, Cpu6502::Operand operand);
+	void CLI(Operation op, Cpu6502::Operand operand);
+	void CLV(Operation op, Cpu6502::Operand operand);
+	void CMP(Operation op, Cpu6502::Operand operand);
+	void CPX(Operation op, Cpu6502::Operand operand);
+	void CPY(Operation op, Cpu6502::Operand operand);
+	void DEC(Operation op, Cpu6502::Operand operand);
+	void DEX(Operation op, Cpu6502::Operand operand);
+	void DEY(Operation op, Cpu6502::Operand operand);
+	void EOR(Operation op, Cpu6502::Operand operand);
+	void INC(Operation op, Cpu6502::Operand operand);
+	void INX(Operation op, Cpu6502::Operand operand);
+	void INY(Operation op, Cpu6502::Operand operand);
+	void JMP(Operation op, Cpu6502::Operand operand);
+	void JSR(Operation op, Cpu6502::Operand operand);
+	void LDA(Operation op, Cpu6502::Operand operand);
+	void LDX(Operation op, Cpu6502::Operand operand);
+	void LDY(Operation op, Cpu6502::Operand operand);
+	void LSR(Operation op, Cpu6502::Operand operand);
+	void NOP(Operation op, Cpu6502::Operand operand);
+	void ORA(Operation op, Cpu6502::Operand operand);
+	void PHA(Operation op, Cpu6502::Operand operand);
+	void PHP(Operation op, Cpu6502::Operand operand);
+	void PLA(Operation op, Cpu6502::Operand operand);
+	void PLP(Operation op, Cpu6502::Operand operand);
+	void ROL(Operation op, Cpu6502::Operand operand);
+	void ROR(Operation op, Cpu6502::Operand operand);
+	void RTI(Operation op, Cpu6502::Operand operand);
+	void RTS(Operation op, Cpu6502::Operand operand);
+	void SBC(Operation op, Cpu6502::Operand operand);
+	void SEC(Operation op, Cpu6502::Operand operand);
+	void SED(Operation op, Cpu6502::Operand operand);
+	void SEI(Operation op, Cpu6502::Operand operand);
+	void STA(Operation op, Cpu6502::Operand operand);
+	void STX(Operation op, Cpu6502::Operand operand);
+	void STY(Operation op, Cpu6502::Operand operand);
+	void TAX(Operation op, Cpu6502::Operand operand);
+	void TAY(Operation op, Cpu6502::Operand operand);
+	void TSX(Operation op, Cpu6502::Operand operand);
+	void TXA(Operation op, Cpu6502::Operand operand);
+	void TXS(Operation op, Cpu6502::Operand operand);
+	void TYA(Operation op, Cpu6502::Operand operand);
+
+
+};
 } // namespace nes
