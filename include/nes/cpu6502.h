@@ -122,6 +122,15 @@ private:
 	void TXA(Operation op, Cpu6502::Operand operand);
 	void TXS(Operation op, Cpu6502::Operand operand);
 	void TYA(Operation op, Cpu6502::Operand operand);
+	void LAX(Operation op, Cpu6502::Operand operand);
+	void SAX(Operation op, Cpu6502::Operand operand);
+	void USBC(Operation op, Cpu6502::Operand operand);
+	void DCP(Operation op, Cpu6502::Operand operand);
+	void ISC(Operation op, Cpu6502::Operand operand);
+	void SLO(Operation op, Cpu6502::Operand operand);
+	void RLA(Operation op, Cpu6502::Operand operand);
+	void SRE(Operation op, Cpu6502::Operand operand);
+	void RRA(Operation op, Cpu6502::Operand operand);
 
 
 };
