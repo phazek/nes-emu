@@ -1,7 +1,8 @@
 #include "nes/cpu6502.h"
 #include "nes/instructions.h"
 
-#include "tfm/tinyformat.h"
+#include <tfm/tinyformat.h>
+#include <optional>
 
 namespace nes {
 
@@ -11,6 +12,7 @@ uint16_t Join(uint8_t LL, uint8_t HH) {
 	return (uint16_t)HH << 8 | LL;
 }
 
+constexpr uint16_t kStackBase = 0x0100;
 constexpr uint16_t kNMIVectorLo = 0xFFFA;
 constexpr uint16_t kNMIVectorHi = 0xFFFB;
 constexpr uint16_t kResetVectorLo = 0xFFFC;
@@ -337,7 +339,6 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 	switch (m) {
 		case AddressMode::kACC: {
 			res.val = acc_;
-			res.addr = 0xFFFF;
 			res.boundaryCrossed = false;
 			break;
 		}
@@ -379,7 +380,6 @@ Cpu6502::Operand Cpu6502::FetchOperand(AddressMode m) {
 		}
 		case AddressMode::kIMP: {
 			res.val = 0;
-			res.addr = 0xFFFF;
 			res.boundaryCrossed = false;
 			break;
 		}
@@ -462,7 +462,7 @@ void Cpu6502::SetFlag(Flag f, bool active) {
 }
 
 void Cpu6502::PushStack(uint8_t val) {
-	bus_->Write(0x100 + stackPtr_--, val);
+	bus_->Write(kStackBase + stackPtr_--, val);
 }
 
 uint8_t Cpu6502::PopStack() {
@@ -569,10 +569,10 @@ void Cpu6502::ASL(Operation op, Cpu6502::Operand operand) {
 	SetFlag(Flag::N, res & 0x80);
 	SetFlag(Flag::Z, res == 0);
 
-	if (operand.addr == 0xFFFF) {
-		acc_ = res;
+	if (operand.addr) {
+		bus_->Write(operand.addr.value(), res);
 	} else {
-		bus_->Write(operand.addr, res);
+		acc_ = res;
 	}
 
 	switch (op.addrMode) {
@@ -812,7 +812,7 @@ void Cpu6502::DEC(Operation op, Cpu6502::Operand operand) {
 	uint8_t res = operand.val - 1;
 	SetFlag(Flag::N, res & 0x80);
 	SetFlag(Flag::Z, res == 0);
-	bus_->Write(operand.addr, res);
+	bus_->Write(operand.addr.value(), res);
 
 	switch (op.addrMode) {
 		case AddressMode::kABS:
@@ -891,7 +891,7 @@ void Cpu6502::INC(Operation op, Cpu6502::Operand operand) {
 	uint8_t res = operand.val + 1;
 	SetFlag(Flag::N, res & 0x80);
 	SetFlag(Flag::Z, res == 0);
-	bus_->Write(operand.addr, res);
+	bus_->Write(operand.addr.value(), res);
 
 	switch (op.addrMode) {
 		case AddressMode::kABS:
@@ -930,7 +930,7 @@ void Cpu6502::INY(Operation op, Cpu6502::Operand operand) {
 }
 
 void Cpu6502::JMP(Operation op, Cpu6502::Operand operand) {
-	pc_ = operand.addr;
+	pc_ = operand.addr.value();
 
 	switch (op.addrMode) {
 		case AddressMode::kABS:
@@ -950,7 +950,7 @@ void Cpu6502::JSR(Operation op, Cpu6502::Operand operand) {
 	auto addr = pc_ - 1;
 	PushStack(addr >> 8); // HH
 	PushStack(addr & 0xFF); // LL
-	pc_ = operand.addr;
+	pc_ = operand.addr.value();
 
 	cycleLeft_ += 6;
 }
@@ -1058,10 +1058,10 @@ void Cpu6502::LSR(Operation op, Cpu6502::Operand operand) {
 	SetFlag(Flag::N, false);
 	SetFlag(Flag::Z, res == 0);
 
-	if (operand.addr == 0xFFFF) {
-		acc_ = res;
+	if (operand.addr) {
+		bus_->Write(operand.addr.value(), res);
 	} else {
-		bus_->Write(operand.addr, res);
+		acc_ = res;
 	}
 
 	switch (op.addrMode) {
@@ -1189,10 +1189,10 @@ void Cpu6502::ROL(Operation op, Cpu6502::Operand operand) {
 	SetFlag(Flag::N, res & 0x80);
 	SetFlag(Flag::Z, res == 0);
 
-	if (operand.addr == 0xFFFF) {
-		acc_ = res;
+	if (operand.addr) {
+		bus_->Write(operand.addr.value(), res);
 	} else {
-		bus_->Write(operand.addr, res);
+		acc_ = res;
 	}
 
 	switch (op.addrMode) {
@@ -1227,10 +1227,10 @@ void Cpu6502::ROR(Operation op, Cpu6502::Operand operand) {
 	SetFlag(Flag::N, res & 0x80);
 	SetFlag(Flag::Z, res == 0);
 
-	if (operand.addr == 0xFFFF) {
-		acc_ = res;
+	if (operand.addr) {
+		bus_->Write(operand.addr.value(), res);
 	} else {
-		bus_->Write(operand.addr, res);
+		acc_ = res;
 	}
 
 	switch (op.addrMode) {
@@ -1337,7 +1337,7 @@ void Cpu6502::SEI(Operation op, Cpu6502::Operand operand) {
 }
 
 void Cpu6502::STA(Operation op, Cpu6502::Operand operand) {
-	bus_->Write(operand.addr, acc_);
+	bus_->Write(operand.addr.value(), acc_);
 
 	switch (op.addrMode) {
 		case AddressMode::kABS:
@@ -1370,7 +1370,7 @@ void Cpu6502::STA(Operation op, Cpu6502::Operand operand) {
 }
 
 void Cpu6502::STX(Operation op, Cpu6502::Operand operand) {
-	bus_->Write(operand.addr, x_);
+	bus_->Write(operand.addr.value(), x_);
 
 	switch (op.addrMode) {
 		case AddressMode::kABS:
@@ -1391,7 +1391,7 @@ void Cpu6502::STX(Operation op, Cpu6502::Operand operand) {
 }
 
 void Cpu6502::STY(Operation op, Cpu6502::Operand operand) {
-	bus_->Write(operand.addr, y_);
+	bus_->Write(operand.addr.value(), y_);
 
 	switch (op.addrMode) {
 		case AddressMode::kABS:
@@ -1498,7 +1498,7 @@ void Cpu6502::LAX(Operation op, Cpu6502::Operand operand) {
 }
 
 void Cpu6502::SAX(Operation op, Cpu6502::Operand operand) {
-	bus_->Write(operand.addr, acc_ & x_);
+	bus_->Write(operand.addr.value(), acc_ & x_);
 
 	switch (op.addrMode) {
 		case AddressMode::kABS:
@@ -1535,7 +1535,7 @@ void Cpu6502::USBC(Operation op, Cpu6502::Operand operand) {
 }
 
 void Cpu6502::DCP(Operation op, Cpu6502::Operand operand) {
-	bus_->Write(operand.addr, operand.val - 1);
+	bus_->Write(operand.addr.value(), operand.val - 1);
 	auto res = acc_ - operand.val + 1;
 	SetFlag(Flag::N, res != 0 ? (res & 0x80) : 0);
 	SetFlag(Flag::Z, (res & 0xFF) == 0);
@@ -1573,7 +1573,7 @@ void Cpu6502::DCP(Operation op, Cpu6502::Operand operand) {
 
 void Cpu6502::ISC(Operation op, Cpu6502::Operand operand) {
 	uint8_t incRes = operand.val + 1;
-	bus_->Write(operand.addr, incRes);
+	bus_->Write(operand.addr.value(), incRes);
 
 	const uint16_t sum = acc_ + ~incRes + (IsSet(Flag::C) ? 1 : 0);
 	const uint8_t addRes = sum & 0xFF;
@@ -1616,7 +1616,7 @@ void Cpu6502::ISC(Operation op, Cpu6502::Operand operand) {
 void Cpu6502::SLO(Operation op, Cpu6502::Operand operand) {
 	uint8_t shiftRes = operand.val << 1;
 	SetFlag(Flag::C, operand.val & 0x80);
-	bus_->Write(operand.addr, shiftRes);
+	bus_->Write(operand.addr.value(), shiftRes);
 
 	acc_ = acc_ | shiftRes;
 	SetFlag(Flag::N, acc_ & 0x80);
@@ -1656,7 +1656,7 @@ void Cpu6502::RLA(Operation op, Cpu6502::Operand operand) {
 	uint8_t shiftRes = operand.val << 1;
 	shiftRes |= IsSet(Flag::C) ? 0x01 : 0x00;
 	SetFlag(Flag::C, operand.val & 0x80);
-	bus_->Write(operand.addr, shiftRes);
+	bus_->Write(operand.addr.value(), shiftRes);
 
 	acc_ = acc_ & shiftRes;
 	SetFlag(Flag::N, acc_ & 0x80);
@@ -1695,7 +1695,7 @@ void Cpu6502::RLA(Operation op, Cpu6502::Operand operand) {
 void Cpu6502::SRE(Operation op, Cpu6502::Operand operand) {
 	uint8_t shiftRes = operand.val >> 1;
 	SetFlag(Flag::C, operand.val & 0x01);
-	bus_->Write(operand.addr, shiftRes);
+	bus_->Write(operand.addr.value(), shiftRes);
 
 	acc_ ^= shiftRes;
 	SetFlag(Flag::N, acc_ & 0x80);
@@ -1735,7 +1735,7 @@ void Cpu6502::RRA(Operation op, Cpu6502::Operand operand) {
 	uint8_t shiftRes = operand.val >> 1;
 	shiftRes |= IsSet(Flag::C) ? 0x80 : 0x00;
 	SetFlag(Flag::C, operand.val & 0x01);
-	bus_->Write(operand.addr, shiftRes);
+	bus_->Write(operand.addr.value(), shiftRes);
 
 	const uint16_t sum = acc_ + shiftRes + (IsSet(Flag::C) ? 1 : 0);
 	const uint8_t addRes = sum & 0xFF;

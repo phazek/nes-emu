@@ -40,7 +40,7 @@ private:
 
 	struct Operand {
 		uint8_t val = 0;
-		uint16_t addr = 0;
+		std::optional<uint16_t> addr = std::nullopt;
 		bool boundaryCrossed = false;
 	};
 
