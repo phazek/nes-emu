@@ -26,7 +26,7 @@ private:
 	Controller con1_;
 	uint8_t tickIndex_ = 0;
 	bool paused_ = false;
-	float tickDuration_ = 0.f;
+	double tickDuration_ = 0.0;
 	float timeToRun_ = 0.f;
 	bool displayChrBanks_ = false;
 

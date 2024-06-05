@@ -3,9 +3,10 @@
 
 namespace {
 
-constexpr uint64_t kClockFrequency = 21477272; // Hz
+constexpr uint64_t kClockFrequency = 21'477'272; // Hz
 constexpr uint64_t kPPUFrequency = kClockFrequency / 4; // Hz
-constexpr float kPPUTickDuration = 1.f / kPPUFrequency; // s
+constexpr uint64_t kCPUFrequency = kPPUFrequency / 3; // Hz
+constexpr double kPPUTickDuration = 1.0 / kPPUFrequency; // s
 
 const olc::vi2d kChrBankDisplayPos{80, 80};
 
@@ -29,13 +30,13 @@ NesApp::NesApp()
 : bus_()
 , cpu_(&bus_)
 , ppu_(&bus_)
-, frameBufferSprite_(256, 240) {
+, frameBufferSprite_(256, 240)
+, tickDuration_(kPPUTickDuration) {
 	sAppName = "NesEmu";
 }
 
 bool NesApp::OnUserCreate() {
 	cpu_.Reset();
-	tickDuration_ = kPPUTickDuration;
 
 	ppu_.SetFramebuffer(reinterpret_cast<RGBA*>(frameBufferSprite_.GetData()));
 
@@ -73,10 +74,10 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 	timeToRun_ += paused_ ? 0.f : fElapsedTime;
 
 	while (timeToRun_ > tickDuration_) {
-		if (tickIndex_ == 0) {
+		if (tickIndex_++ == 0) {
 			cpu_.Tick();
 		}
-		tickIndex_ %= 2; // CPU ticks on every 3rd PPU tick
+		tickIndex_ %= 3; // CPU ticks on every 3rd PPU tick
 		ppu_.Tick();
 
 		timeToRun_ -= tickDuration_;
