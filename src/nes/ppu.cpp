@@ -184,8 +184,12 @@ void Ppu2C02::Write(uint16_t addr, uint8_t val) {
 	}
 }
 
-void Ppu2C02::SetFramebuffer(RGBA* buf) {
-	frameBuffer_ = buf;
+void Ppu2C02::SetFramebuffers(std::array<RGBA*, 2> buffers) {
+	frameBuffers_ = buffers;
+}
+
+uint8_t Ppu2C02::GetActiveFramebufferId() const {
+	return (activeFrameBufferId_ + 1) % 2;
 }
 
 const std::array<Ppu2C02::Palette, 8>& Ppu2C02::GetFramePalette() const {
@@ -216,7 +220,7 @@ void Ppu2C02::Tick() {
 		if (controlState_.generateNMI) {
 			bus_->TriggerNMI();
 		}
-
+		activeFrameBufferId_ = (activeFrameBufferId_ + 1) % 2;
 	}
 
 	if (newDot == (260 * kScanlineColCount + 1)) {
@@ -240,12 +244,12 @@ void Ppu2C02::Tick() {
 			int srcIdx = sRow * kScreenColCount + sCol;
 			bgDot = backgroundBuffers_[controlState_.nameTableId][srcIdx];
 		}
-		frameBuffer_[dstIdx] = bgDot.color;
+		frameBuffers_[activeFrameBufferId_][dstIdx] = bgDot.color;
 
 	    auto spriteDot = spriteBuffer_[dstIdx];
 	    if (spriteDot.color.a != 0 && spriteDot.isOpaque) {
 			if (!spriteDot.isBehind || !bgDot.isOpaque) {
-			    frameBuffer_[dstIdx] = spriteDot.color;
+			    frameBuffers_[activeFrameBufferId_][dstIdx] = spriteDot.color;
 			}
 
 			if (bgDot.isOpaque && spriteDot.isSprite0 &&

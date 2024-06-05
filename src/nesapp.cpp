@@ -30,15 +30,20 @@ NesApp::NesApp()
 : bus_()
 , cpu_(&bus_)
 , ppu_(&bus_)
-, frameBufferSprite_(256, 240)
 , tickDuration_(kPPUTickDuration) {
 	sAppName = "NesEmu";
+	frameBufferSprites_[0] = olc::Sprite{256, 240};
+	frameBufferSprites_[1] = olc::Sprite{256, 240};
 }
 
 bool NesApp::OnUserCreate() {
 	cpu_.Reset();
 
-	ppu_.SetFramebuffer(reinterpret_cast<RGBA*>(frameBufferSprite_.GetData()));
+	std::array<RGBA*, 2> frameBuffers{
+		reinterpret_cast<RGBA*>(frameBufferSprites_[0].GetData()),
+		reinterpret_cast<RGBA*>(frameBufferSprites_[1].GetData())
+	};
+	ppu_.SetFramebuffers(frameBuffers);
 
 	bus_.AttachController(&con1_, true);
 	return true;
@@ -85,7 +90,7 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 
 	Clear(olc::DARK_BLUE);
 
-	DrawSprite(121, 0, &frameBufferSprite_, 2);
+	DrawSprite(121, 0, &frameBufferSprites_[ppu_.GetActiveFramebufferId()], 2);
 	RenderSidePanel();
 
 	if (displayChrBanks_) {

@@ -21,7 +21,8 @@ public:
 	std::span<uint8_t> ReadN(uint16_t addr, uint16_t count);
 	void Write(uint16_t addr, uint8_t val);
 
-	void SetFramebuffer(RGBA* buf);
+	void SetFramebuffers(std::array<RGBA*, 2> buffers);
+	uint8_t GetActiveFramebufferId() const;
 
 	const std::array<Palette, 8>& GetFramePalette() const;
 	const std::array<RGBA, 8*8>& GetSpriteZero() const;
@@ -37,7 +38,9 @@ private:
 	using BackingBuffer = std::array<BufferDot, kScreenColCount * kScreenRowCount>;
 
 	Bus* bus_ = nullptr;
-	RGBA* frameBuffer_ = nullptr;
+
+	uint8_t activeFrameBufferId_ = 0;
+	std::array<RGBA*, 2> frameBuffers_;
 
 	std::array<BackingBuffer, 4> backgroundBuffers_;
 	BackingBuffer spriteBuffer_;

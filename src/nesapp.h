@@ -30,5 +30,5 @@ private:
 	float timeToRun_ = 0.f;
 	bool displayChrBanks_ = false;
 
-	olc::Sprite frameBufferSprite_;
+	std::array<olc::Sprite, 2> frameBufferSprites_;
 };
