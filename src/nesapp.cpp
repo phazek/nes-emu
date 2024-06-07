@@ -79,10 +79,11 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 	timeToRun_ += paused_ ? 0.f : fElapsedTime;
 
 	while (timeToRun_ > tickDuration_) {
-		if (tickIndex_++ == 0) {
+		if (tickIndex_ == 0) {
 			cpu_.Tick();
 		}
-		tickIndex_ %= 3; // CPU ticks on every 3rd PPU tick
+
+		++tickIndex_ %= 2; // CPU ticks on every 3rd PPU tick
 		ppu_.Tick();
 
 		timeToRun_ -= tickDuration_;
