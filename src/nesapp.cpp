@@ -137,7 +137,7 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 		timeToRun_ -= tickDuration_;
 	}
 
-	Clear(olc::DARK_BLUE);
+	Clear(olc::Pixel(30, 30, 47));
 
 	DrawSprite(121, 0, &frameBufferSprites_[ppu_.GetActiveFramebufferId()], 2);
 	RenderSidePanel();
@@ -174,20 +174,35 @@ void NesApp::RenderChrBanks() {
 }
 
 void NesApp::RenderSidePanel() {
-	auto state = cpu_.GetState();
+	const olc::Pixel fontColor{255, 175, 127};
+	const auto state = cpu_.GetState();
+	const int32_t leftMargin = 10;
+	int32_t yPos = 1;
+
 	DrawLine(120, 0, 120, ScreenHeight(), olc::WHITE);
-	int yPos = 1;
-	DrawString(10, yPos++ * 10, tfm::format("PC:  0x%04X", state.pc));
-	DrawString(10, yPos++ * 10, tfm::format("A:   0x%02X", state.acc));
-	DrawString(10, yPos++ * 10, tfm::format("X:   0x%02X", state.x));
-	DrawString(10, yPos++ * 10, tfm::format("Y:   0x%02X", state.y));
-	DrawString(10, yPos++ * 10, tfm::format("SP:  0x%02X", state.stackPtr));
-	DrawString(10, yPos++ * 10, tfm::format("P:   0x%02X", state.status));
-	DrawString(10, yPos++ * 10, tfm::format("CYC: %06d", state.cycle));
+
+	DrawString(leftMargin, yPos++ * 10, tfm::format("PC:  0x%04X", state.pc), fontColor);
+	DrawString(leftMargin, yPos++ * 10, tfm::format("A:   0x%02X", state.acc), fontColor);
+	DrawString(leftMargin, yPos++ * 10, tfm::format("X:   0x%02X", state.x), fontColor);
+	DrawString(leftMargin, yPos++ * 10, tfm::format("Y:   0x%02X", state.y), fontColor);
+	DrawString(leftMargin, yPos++ * 10, tfm::format("SP:  0x%02X", state.stackPtr), fontColor);
+	DrawString(leftMargin, yPos++ * 10, tfm::format("P:   0x%02X", state.status), fontColor);
+
+	auto cyc = state.cycle;
+	if (cyc > 1'000'000'000) {
+		DrawString(leftMargin, yPos++ * 10, tfm::format("CYC: %03dG", cyc / 1'000'000), fontColor);
+	} else if (cyc > 1'000'000) {
+		DrawString(leftMargin, yPos++ * 10, tfm::format("CYC: %03dM", cyc / 1'000'000), fontColor);
+	} else if (cyc > 1'000) {
+		DrawString(leftMargin, yPos++ * 10, tfm::format("CYC: %03dK", state.cycle / 1000), fontColor);
+	} else {
+		DrawString(leftMargin, yPos++ * 10, tfm::format("CYC: %03d" , cyc), fontColor);
+	}
+
 	DrawLine(0, yPos * 10, 120, yPos * 10, olc::WHITE);
 	++yPos;
 
-	DrawString(10, yPos++ * 10, "Palettes");
+	DrawString(leftMargin, yPos++ * 10, "Palettes");
 	auto& framePal = ppu_.GetFramePalette();
 
 	for (int palIdx = 0; palIdx < 8; ++palIdx) {
