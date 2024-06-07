@@ -19,6 +19,7 @@ public:
 private:
 	void RenderSidePanel();
 	void RenderChrBanks();
+	bool ProcessKeyInputs();
 
 	Bus bus_;
 	Cpu6502 cpu_;
