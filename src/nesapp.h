@@ -25,7 +25,6 @@ private:
 	Cpu6502 cpu_;
 	Ppu2C02 ppu_;
 	Controller con1_;
-	uint8_t tickIndex_ = 0;
 	bool paused_ = false;
 	double tickDuration_ = 0.0;
 	float timeToRun_ = 0.f;

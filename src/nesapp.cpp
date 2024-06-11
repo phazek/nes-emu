@@ -5,8 +5,9 @@ namespace {
 
 constexpr uint64_t kClockFrequency = 21'477'272; // Hz
 constexpr uint64_t kPPUFrequency = kClockFrequency / 4; // Hz
-constexpr uint64_t kCPUFrequency = kPPUFrequency / 3; // Hz
+constexpr uint64_t kCPUFrequency = kClockFrequency / 12; // Hz
 constexpr double kPPUTickDuration = 1.0 / kPPUFrequency; // s
+constexpr double kCPUTickDuration = 1.0 / kCPUFrequency; // s
 
 const olc::vi2d kChrBankDisplayPos{80, 80};
 
@@ -30,7 +31,7 @@ NesApp::NesApp()
 : bus_()
 , cpu_(&bus_)
 , ppu_(&bus_)
-, tickDuration_(kPPUTickDuration) {
+, tickDuration_(kCPUTickDuration) {
 	sAppName = "NesEmu";
 	frameBufferSprites_[0] = olc::Sprite{256, 240};
 	frameBufferSprites_[1] = olc::Sprite{256, 240};
@@ -127,12 +128,10 @@ bool NesApp::OnUserUpdate(float fElapsedTime) {
 	timeToRun_ += paused_ ? 0.f : fElapsedTime;
 
 	while (timeToRun_ > tickDuration_) {
-		if (tickIndex_ == 0) {
-			cpu_.Tick();
-		}
-
-		++tickIndex_ %= 2; // CPU ticks on every 3rd PPU tick
 		ppu_.Tick();
+		ppu_.Tick();
+		ppu_.Tick(); // For some reason causes rendering to misbehave
+		cpu_.Tick();
 
 		timeToRun_ -= tickDuration_;
 	}
